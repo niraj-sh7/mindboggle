@@ -73,7 +73,7 @@ jobs:
             nose \
             etelemetry \
             tbb-devel
-          pip install colormath pytest pytest-timeout
+          pip install colormath pytest pytest-timeout pytest-forked
           python - <<'PY'
           import numpy as np
           if not hasattr(np, "asscalar"):
