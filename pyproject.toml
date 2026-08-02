@@ -45,8 +45,7 @@ dependencies = [
 dynamic = ["version"]
 
 [dependency-groups]
-# Pinned so local runs match CI (which uses `uvx ruff@0.16.0`).
-dev = ["ruff==0.16.0"]
+dev = ["ruff==0.16.0", "pytest", "pytest-timeout"]
 
 [project.urls]
 Homepage = "https://mindboggle.info/"
@@ -146,15 +145,3 @@ ignore = [
 # Entry scripts are not imported as modules.
 "src/mindboggle/mindboggle" = ["E402"]
 "src/mindboggle/mindboggle123" = ["E402"]
-
-[tool.pytest.ini_options]
-addopts = [
-  "--doctest-modules",
-  "--timeout=30",
-  "--ignore=src/mindboggle/testzernikecompatinit.py",
-  "--ignore=src/mindboggle/testzernikecompat*.py",
-  "--ignore=src/mindboggle/testzernikemultiproc*.py",
-  "--ignore=src/mindboggle/x/test_zernike/compat",
-  "--ignore=src/mindboggle/x/test_zernike/multiproc",
-  "--ignore=src/mindboggle/shapes/zernike/pipelines.py",
-]
