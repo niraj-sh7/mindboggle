@@ -15,6 +15,22 @@ Copyright 2016,  Mindboggle team (http://mindboggle.info), Apache v2.0 License
 import builtins
 
 
+def _vtk_array_to_numpy_copy(vtk_array):
+    """Convert a VTK array to an owned NumPy copy."""
+    from vtk.util.numpy_support import vtk_to_numpy
+
+    return vtk_to_numpy(vtk_array).copy()
+
+
+def _point_data_array_names(point_data):
+    """Return the names of all point-data arrays with names."""
+    return [
+        point_data.GetArrayName(i)
+        for i in range(point_data.GetNumberOfArrays())
+        if point_data.GetArray(i) is not None and point_data.GetArrayName(i)
+    ]
+
+
 def read_vertices(filename):
     """
     Load VERTICES segment from a VTK file (actually indices to vertices).
@@ -58,7 +74,7 @@ def read_vertices(filename):
     Data = Reader.GetOutput()
 
     Vrts = Data.GetVerts()
-    indices = [Vrts.GetData().GetValue(i) for i in range(1, Vrts.GetSize())]
+    indices = _vtk_array_to_numpy_copy(Vrts.GetData())[1:].tolist()
 
     return indices
 
@@ -103,17 +119,24 @@ def read_lines(filename):
 
     Data = Reader.GetOutput()
     Lns = Data.GetLines()
-
-    lines = [
-        [Lns.GetData().GetValue(j) for j in range(i * 3 + 1, i * 3 + 3)]
-        for i in range(Data.GetNumberOfLines())
-    ]
-
     PointData = Data.GetPointData()
-    print(f"There are {Reader.GetNumberOfscalarsInFile()} scalars in file {filename}")
-    print(f"Loading the scalar {Reader.GetScalarsNameInFile(0)}")
-    ScalarsArray = PointData.GetArray(Reader.GetScalarsNameInFile(0))
-    scalars = [ScalarsArray.GetValue(i) for i in range(0, ScalarsArray.GetDataSize())]
+    scalar_names = _point_data_array_names(PointData)
+
+    if Data.GetNumberOfLines() > 0:
+        lines_array = _vtk_array_to_numpy_copy(Lns.GetData())
+        lines = lines_array.reshape(-1, 3)[:, 1:3].tolist()
+    else:
+        lines = []
+
+    nscalars = len(scalar_names)
+    print(f"There are {nscalars} scalars in file {filename}")
+    if nscalars > 0:
+        scalar_name = scalar_names[0]
+        print(f"Loading the scalar {scalar_name}")
+        ScalarsArray = PointData.GetArray(scalar_name)
+        scalars = _vtk_array_to_numpy_copy(ScalarsArray).tolist()
+    else:
+        scalars = []
 
     return lines, scalars
 
@@ -197,19 +220,12 @@ def read_faces_points(filename):
     Reader.Update()
 
     Data = Reader.GetOutput()
-    points = [
-        list(Data.GetPoint(point_id)) for point_id in range(Data.GetNumberOfPoints())
-    ]
+    points = _vtk_array_to_numpy_copy(Data.GetPoints().GetData()).tolist()
     npoints = len(points)
 
     if Data.GetNumberOfPolys() > 0:
-        faces = [
-            [
-                int(Data.GetPolys().GetData().GetValue(j))
-                for j in range(i * 4 + 1, i * 4 + 4)
-            ]
-            for i in range(Data.GetPolys().GetNumberOfCells())
-        ]
+        polys_array = _vtk_array_to_numpy_copy(Data.GetPolys().GetData())
+        faces = polys_array.reshape(-1, 4)[:, 1:4].tolist()
     else:
         faces = []
 
@@ -255,25 +271,21 @@ def read_scalars(filename, return_first=True, return_array=False):
 
     scalars = []
     scalar_names = []
-    if Reader.GetNumberOfScalarsInFile() > 0:
-        for scalar_index in range(Reader.GetNumberOfScalarsInFile()):
-            scalar_name = Reader.GetScalarsNameInFile(scalar_index)
+    for scalar_name in _point_data_array_names(PointData):
 
-            # n_scalars = scalar_index + 1
-            # if n_scalars == 1:
-            #    print("Load \"{0}\" scalars from {1}".
-            #          format(scalar_name, os.path.basename(filename)))
-            # else:
-            #    print("Load \"{0}\" (of {1} scalars) from {2}".
-            #          format(scalar_name, n_scalars,
-            #                 os.path.basename(filename)))
+        # n_scalars = scalar_index + 1
+        # if n_scalars == 1:
+        #    print("Load \"{0}\" scalars from {1}".
+        #          format(scalar_name, os.path.basename(filename)))
+        # else:
+        #    print("Load \"{0}\" (of {1} scalars) from {2}".
+        #          format(scalar_name, n_scalars,
+        #                 os.path.basename(filename)))
 
-            scalar_array = PointData.GetArray(scalar_name)
-            scalar = [
-                scalar_array.GetValue(i) for i in range(scalar_array.GetDataSize())
-            ]
-            scalars.append(scalar)
-            scalar_names.append(scalar_name)
+        scalar_array = PointData.GetArray(scalar_name)
+        scalar = _vtk_array_to_numpy_copy(scalar_array).tolist()
+        scalars.append(scalar)
+        scalar_names.append(scalar_name)
 
     if return_first:
         if scalars:
@@ -347,61 +359,45 @@ def read_vtk(input_vtk, return_first=True, return_array=False):
 
     Data = Reader.GetOutput()
     PointData = Data.GetPointData()
-    points = [
-        list(Data.GetPoint(point_id)) for point_id in range(0, Data.GetNumberOfPoints())
-    ]
+    points = _vtk_array_to_numpy_copy(Data.GetPoints().GetData()).tolist()
     npoints = len(points)
 
     if Data.GetNumberOfPolys() > 0:
-        faces = [
-            [
-                int(Data.GetPolys().GetData().GetValue(j))
-                for j in range(i * 4 + 1, i * 4 + 4)
-            ]
-            for i in range(Data.GetPolys().GetNumberOfCells())
-        ]
+        polys_array = _vtk_array_to_numpy_copy(Data.GetPolys().GetData())
+        faces = polys_array.reshape(-1, 4)[:, 1:4].tolist()
     else:
         faces = []
 
     if Data.GetNumberOfLines() > 0:
-        lines = [
-            [Data.GetLines().GetData().GetValue(j) for j in range(i * 3 + 1, i * 3 + 3)]
-            for i in range(Data.GetNumberOfLines())
-        ]
+        lines_array = _vtk_array_to_numpy_copy(Data.GetLines().GetData())
+        lines = lines_array.reshape(-1, 3)[:, 1:3].tolist()
     else:
         lines = []
 
     if Data.GetNumberOfVerts() > 0:
-        indices = [
-            Data.GetVerts().GetData().GetValue(i)
-            for i in range(1, Data.GetVerts().GetSize())
-        ]
+        indices = _vtk_array_to_numpy_copy(Data.GetVerts().GetData())[1:].tolist()
     else:
         indices = []
 
     scalars = []
     scalar_names = []
 
-    if Reader.GetNumberOfScalarsInFile() > 0:
-        for scalar_index in range(Reader.GetNumberOfScalarsInFile()):
-            scalar_name = Reader.GetScalarsNameInFile(scalar_index)
+    for scalar_name in _point_data_array_names(PointData):
 
-            # n_scalars = scalar_index + 1
-            # if n_scalars == 1:
-            #    print("Load \"{0}\" scalars from {1}".
-            #          format(scalar_name, os.path.basename(input_vtk)))
-            # else:
-            #    print("Load \"{0}\" (of {1} scalars) from {2}".
-            #          format(scalar_name, n_scalars,
-            #                 os.path.basename(input_vtk)))
+        # n_scalars = scalar_index + 1
+        # if n_scalars == 1:
+        #    print("Load \"{0}\" scalars from {1}".
+        #          format(scalar_name, os.path.basename(input_vtk)))
+        # else:
+        #    print("Load \"{0}\" (of {1} scalars) from {2}".
+        #          format(scalar_name, n_scalars,
+        #                 os.path.basename(input_vtk)))
 
-            scalar_array = PointData.GetArray(scalar_name)
-            if scalar_array:
-                scalar = [
-                    scalar_array.GetValue(i) for i in range(scalar_array.GetDataSize())
-                ]
-                scalars.append(scalar)
-                scalar_names.append(scalar_name)
+        scalar_array = PointData.GetArray(scalar_name)
+        if scalar_array:
+            scalar = _vtk_array_to_numpy_copy(scalar_array).tolist()
+            scalars.append(scalar)
+            scalar_names.append(scalar_name)
 
     if return_first:
         if scalars:
@@ -1506,7 +1502,7 @@ def freesurfer_surface_to_vtk(surface_file, orig_file="", output_vtk=""):
     if os.path.exists(orig_file):
         import numpy as np
 
-        Norig = nb.load(orig_file).get_affine()
+        Norig = nb.load(orig_file).affine
         Torig = np.array(
             [[-1, 0, 0, 128], [0, 0, 1, -128], [0, -1, 0, 128], [0, 0, 0, 1]],
             dtype=float,

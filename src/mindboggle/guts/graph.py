@@ -118,7 +118,7 @@ def weight_graph(
     ...                                   add_to_graph, G, sigma, verbose)
     >>> G.size()
     9
-    >>> sorted([(int(k), v) for k, v in dict(G.degree()).items()])
+    >>> sorted(dict(G.degree()).items())
     [(0, 4), (1, 4), (2, 3), (3, 4), (4, 3)]
 
     """
@@ -141,20 +141,18 @@ def weight_graph(
         elif Meshes.shape[1] == 2:
             edge_mat = Meshes
         # Augment matrix to contain edge weight in the third column
-        weighted_edges = np.asarray(
-            [
-                [
-                    Indices[int(i)],
-                    Indices[int(j)],
-                    kernel(
-                        Nodes[int(Indices[int(i)])],
-                        Nodes[int(Indices[int(j)])],
-                        sigma,
-                    ),
-                ]
-                for [i, j] in edge_mat
-            ]
-        )
+        weighted_edges = [
+            (
+                int(Indices[int(i)]),
+                int(Indices[int(j)]),
+                kernel(
+                    Nodes[int(Indices[int(i)])],
+                    Nodes[int(Indices[int(j)])],
+                    sigma,
+                ),
+            )
+            for [i, j] in edge_mat
+        ]
 
         # Add weights to graph
         if add_to_graph:
@@ -227,10 +225,8 @@ def graph_laplacian(W, type_of_laplacian="norm1", verbose=False):
     >>> col = np.array([0, 2, 2, 0, 1, 2])
     >>> data = np.array([1, 2, 3, 4, 5, 6])
     >>> W = sparse.csr_matrix((data, (row, col)), shape=(3, 3)).toarray()
-    >>> W
-    array([[1, 0, 2],
-           [0, 0, 3],
-           [4, 5, 6]])
+    >>> W.tolist()
+    [[1, 0, 2], [0, 0, 3], [4, 5, 6]]
     >>> type_of_laplacian = 'norm1'
     >>> verbose = False
     >>> Laplacian = graph_laplacian(W, type_of_laplacian, verbose)

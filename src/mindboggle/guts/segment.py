@@ -236,7 +236,7 @@ def segment_regions(
     # ------------------------------------------------------------------------
     segments = background_value * np.ones(len(neighbor_lists))
     region_lists = [[] for x in seed_lists]
-    all_regions = []
+    all_regions = set()
     fully_grown = [False for x in seed_lists]
     new_segment_index = 0
     counter = 0
@@ -267,7 +267,7 @@ def segment_regions(
             if not fully_grown[ilist]:
                 # Add seeds to region:
                 region_lists[ilist].extend(seed_list)
-                all_regions.extend(seed_list)
+                all_regions.update(seed_list)
 
                 # Remove seeds from vertices to segment:
                 vertices_to_segment = list(
@@ -366,7 +366,7 @@ def segment_regions(
         while len(vertices_to_segment) >= min_region_size:
             # Add seeds to region:
             region.extend(seed_list)
-            all_regions.extend(seed_list)
+            all_regions.update(seed_list)
 
             # Remove seeds from vertices to segment:
             vertices_to_segment = list(
@@ -870,14 +870,14 @@ def watershed(
     segments = background_value * np.ones(len(depths))
     seed_indices = []
     seed_points = []
-    all_regions = []
+    all_regions = set()
     region = []
     counter = 0
     terminate = False
     while not terminate:
         # Add seeds to region:
         region.extend(seed_list)
-        all_regions.extend(seed_list)
+        all_regions.update(seed_list)
 
         # Remove seeds from vertices to segment:
         indices = list(frozenset(indices).difference(seed_list))
@@ -954,7 +954,7 @@ def watershed(
             print("  Regrow segments from watershed seeds, stopping at borders")
         indices = original_indices[:]
         segments = background_value * np.ones(len(depths))
-        all_regions = []
+        all_regions = set()
         for iseed, seed_index in enumerate(seed_indices):
             seed_list = [seed_index]
             region = []
@@ -962,7 +962,7 @@ def watershed(
             while not terminate:
                 # Add seeds to region:
                 region.extend(seed_list)
-                all_regions.extend(seed_list)
+                all_regions.update(seed_list)
 
                 # Remove seeds from vertices to segment:
                 indices = list(frozenset(indices).difference(seed_list))
@@ -1157,8 +1157,40 @@ def select_largest(
 
     Examples
     --------
-    >>> pass
-
+    >>> # Two surface patches:
+    >>> import numpy as np
+    >>> from mindboggle.mio.vtks import read_scalars, read_vtk
+    >>> from mindboggle.guts.mesh import keep_faces
+    >>> from mindboggle.guts.segment import select_largest
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> exclude_labels = [-1]
+    >>> points, indices, f1, faces, labels, f2,f3,f4 = read_vtk(label_file,
+    ...                                                         True, True)
+    >>> I28 = [i for i,x in enumerate(labels) if x==1028] # superior frontal
+    >>> I20 = [i for i,x in enumerate(labels) if x==1020] # pars triangularis
+    >>> I28.extend(I20)
+    >>> faces = keep_faces(faces, I28)
+    >>> areas, u1 = read_scalars(area_file, True, True)
+    >>> reindex = True
+    >>> background_value = -1
+    >>> verbose = False
+    >>> points2, faces2 = select_largest(points, faces, exclude_labels, areas,
+    ...                                  reindex, background_value, verbose)
+    >>> points2[0]
+    [-1.4894376993179321, 53.260337829589844, 56.523414611816406]
+    >>> points2[1]
+    [-2.2537832260131836, 53.045711517333984, 56.23670959472656]
+    >>> points2[2]
+    [-13.091879844665527, 56.41604232788086, 59.330955505371094]
+    >>> faces2[0]
+    [7722, 7324, 7721]
+    >>> faces2[1]
+    [7712, 7722, 7723]
+    >>> faces2[2]
+    [7721, 8137, 7722]
 
     """
     import numpy as np
@@ -1308,7 +1340,7 @@ def extract_borders(
         labels = np.array(labels)
 
     # Construct an array of labels corresponding to the neighbor lists:
-    L = np.array([list(set(labels[lst])) for lst in neighbor_lists])
+    L = np.array([list(set(labels[lst])) for lst in neighbor_lists], dtype=object)
 
     # Find indices to sets of two labels:
     border_indices = [
@@ -1494,7 +1526,7 @@ def combine_2labels_in_2volumes(file1, file2, label1=3, label2=2, output_file=""
     vol2 = nb.load(file2)
     data1 = vol1.get_fdata().ravel()
     data2 = vol2.get_fdata().ravel()
-    xfm = vol1.get_affine()
+    xfm = vol1.affine
     # ------------------------------------------------------------------------
     # Indices to voxels with label1 or label2 in two files:
     # ------------------------------------------------------------------------
@@ -1580,7 +1612,7 @@ def split_brain(image_file, label_file, left_labels, right_labels):
     dataR = volR.get_fdata().ravel()
     dataL[np.where(dataL != 0)[0]] = 1
     dataR[np.where(dataR != 0)[0]] = 1
-    xfm = vol.get_affine()
+    xfm = vol.affine
     # ------------------------------------------------------------------------
     # Split brain image by masking with left or right labels:
     # ------------------------------------------------------------------------

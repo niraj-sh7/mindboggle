@@ -89,7 +89,7 @@ RUN export PATH="/opt/miniconda-latest/bin:$PATH" \
            'colormath' \
            'nilearn' \
            'tbb-devel' \
-           'nose' \
+           'pytest' \
            'etelemetry' \
     && sync && conda clean -tipsy && sync \
     && bash -c "source activate mb \
@@ -239,7 +239,7 @@ RUN echo '{ \
     \n          "colormath", \
     \n          "nilearn", \
     \n          "tbb-devel", \
-    \n          "nose", \
+    \n          "pytest", \
     \n          "etelemetry" \
     \n        ], \
     \n        "pip_install": [ \

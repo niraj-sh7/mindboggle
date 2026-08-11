@@ -27,7 +27,7 @@ jobs:
             conda create -n $ENV_NAME python=3.6 pip
             source activate $ENV_NAME
             conda install -y cmake mesalib vtk pandas matplotlib \
-                colormath nipype tbb-devel nose etelemetry
+                colormath nipype tbb-devel pytest etelemetry
             conda info --envs
             python -m pip install .
             mkdir $vtk_cpp_tools && cd $vtk_cpp_tools && cmake ../ && make
@@ -37,8 +37,8 @@ jobs:
             source activate $ENV_NAME
             export MB=/opt/conda/envs/${ENV_NAME}/lib/python3.6/site-packages/mindboggle
             export PATH=$PATH:$vtk_cpp_tools
-            python -m "nose" --with-doctest ${MB}/thirdparty/
-            python -m "nose" --with-doctest ${MB}/mio/
-            python -m "nose" --with-doctest ${MB}/guts/
-            python -m "nose" --with-doctest ${MB}/shapes/
-            python -m "nose" --with-doctest ${MB}/features/
+            python -m pytest --doctest-modules ${MB}/thirdparty/
+            python -m pytest --doctest-modules ${MB}/mio/
+            python -m pytest --doctest-modules ${MB}/guts/
+            python -m pytest --doctest-modules ${MB}/shapes/
+            python -m pytest --doctest-modules ${MB}/features/

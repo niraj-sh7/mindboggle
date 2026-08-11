@@ -62,7 +62,7 @@ docker run --rm ${image} generate docker \
   --run 'ln -s /usr/lib/x86_64-linux-gnu /usr/lib64' \
   --miniconda \
     conda_install="python=3.6 pip jupyter cmake nipype>=1.1.4 mesalib vtk=8.2.0=py36ha8e561a_201 pandas
-      matplotlib colormath nilearn tbb-devel nose etelemetry" \
+      matplotlib colormath nilearn tbb-devel pytest etelemetry" \
     pip_install="datalad[full] duecredit" \
     create_env="mb" \
     activate=true \
@@ -121,7 +121,7 @@ docker run --rm ${image} generate singularity \
   --run 'ln -s /usr/lib/x86_64-linux-gnu /usr/lib64' \
   --miniconda \
     conda_install="python=3.6 pip jupyter cmake mesalib vtk=8.2.0=py36ha8e561a_201 pandas
-      matplotlib colormath nipype>=1.1.4 nilearn tbb-devel nose etelemetry" \
+      matplotlib colormath nipype>=1.1.4 nilearn tbb-devel pytest etelemetry" \
     pip_install="datalad[full] duecredit" \
     create_env="mb" \
     activate=true \

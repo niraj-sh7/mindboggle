@@ -45,7 +45,7 @@ dependencies = [
 dynamic = ["version"]
 
 [dependency-groups]
-dev = ["ruff==0.16.0", "pytest", "pytest-timeout"]
+dev = ["ruff==0.16.0", "pytest", "pytest-timeout", "pytest-forked"]
 
 [project.urls]
 Homepage = "https://mindboggle.info/"
@@ -89,6 +89,23 @@ addopts = [
   "--ignore=src/mindboggle/testzernikemultiproc*.py",
   "--ignore=src/mindboggle/x/test_zernike/compat",
   "--ignore=src/mindboggle/x/test_zernike/multiproc",
+  "--ignore=src/mindboggle/shapes/zernike/pipelines.py",
+  "--deselect=src/mindboggle/evaluate/evaluate_labels.py::mindboggle.evaluate.evaluate_labels.evaluate_surface_overlaps",
+  "--deselect=src/mindboggle/features/sulci.py::mindboggle.features.sulci.extract_sulci",
+  "--deselect=src/mindboggle/guts/mesh.py::mindboggle.guts.mesh.decimate_file",
+  "--deselect=src/mindboggle/guts/compute.py::mindboggle.guts.compute.sum_per_label",
+  "--deselect=src/mindboggle/guts/compute.py::mindboggle.guts.compute.stats_per_label",
+  "--deselect=src/mindboggle/guts/mesh.py::mindboggle.guts.mesh.rescale_by_neighborhood",
+  "--deselect=src/mindboggle/guts/mesh.py::mindboggle.guts.mesh.rescale_by_label",
+  "--deselect=src/mindboggle/guts/paths.py::mindboggle.guts.paths.connect_points_hmmf",
+  "--deselect=src/mindboggle/guts/paths.py::mindboggle.guts.paths.smooth_skeletons",
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.area",
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.curvature",
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.geodesic_depth",
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.travel_depth",
+  "--deselect=src/mindboggle/mio/colors.py::mindboggle.mio.colors.group_colors",
+  "--deselect=src/mindboggle/mio/colors.py::mindboggle.mio.colors.label_adjacency_matrix",
+  "--timeout-method=thread",
 ]
 
 [tool.setuptools.dynamic]

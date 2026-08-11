@@ -219,7 +219,7 @@ def zernike_moments_per_label(
                 # Append to a list of lists of spectra:
                 # ------------------------------------------------------------
                 descriptors_lists.append(descriptors)
-                label_list.append(label)
+                label_list.append(int(label))
 
     return descriptors_lists, label_list
 

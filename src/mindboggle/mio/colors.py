@@ -218,7 +218,32 @@ def label_adjacency_matrix(
 
     Examples
     --------
-    >>> pass
+    >>> from mindboggle.mio.colors import label_adjacency_matrix
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> import numpy as np
+    >>> urls, fetch_data = prep_tests()
+    >>> ignore_values = [-1, 0]
+    >>> add_value = 0
+    >>> save_table = False
+    >>> output_format = 'csv'
+    >>> verbose = False
+    >>> label_file = fetch_data(urls['left_manual_labels'], '', '.vtk')
+    >>> labels, matrix, output_table = label_adjacency_matrix(label_file,
+    ...     ignore_values, add_value, save_table, output_format, verbose)
+    >>> rows = matrix.index.get_indexer([20,21,22,23,24,25,26,27,28,29])
+    >>> cols = matrix.columns.get_indexer([35,35,35,35,35,35,35,35,35,35])
+    >>> out = matrix.to_numpy()[rows, cols]
+    >>> np.allclose(out, [ 0.,  1.,  0.,  0.,  0.,  0.,  0.,  1.,  1.,  1.])
+    True
+
+    >>> label_file = fetch_data(urls['freesurfer_labels'], '', '.nii.gz')
+    >>> labels, matrix, output_table = label_adjacency_matrix(label_file,
+    ...     ignore_values, add_value, save_table, output_format, verbose)
+    >>> rows = matrix.index.get_indexer([4,5,7,8,10,11,12,13,14,15])
+    >>> cols = matrix.columns.get_indexer([4,4,4,4,4,4,4,4,4,4])
+    >>> out = matrix.to_numpy()[rows, cols]
+    >>> np.allclose(out, [ 1.,  1.,  0.,  0.,  0.,  1.,  0.,  0.,  1.,  0.])
+    True
 
     """
     import numpy as np
@@ -392,7 +417,63 @@ def group_colors(
 
     Examples
     --------
-    >>> pass
+    >>> # Get colormap:
+    >>> from mindboggle.mio.colors import distinguishable_colors
+    >>> import numpy as np
+    >>> colormap = distinguishable_colors(ncolors=31,
+    ...     backgrounds=[[0,0,0],[1,1,1]],
+    ...     save_csv=False, plot_colormap=False, verbose=False)
+    >>> # Get adjacency matrix:
+    >>> from mindboggle.mio.colors import label_adjacency_matrix
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_manual_labels'], '', '.vtk')
+    >>> IDs, adjacency_matrix, output_table = label_adjacency_matrix(label_file,
+    ...     ignore_values=[-1, 0], add_value=0, save_table=False,
+    ...     output_format='', verbose=False)
+    >>> adjacency_matrix = adjacency_matrix.values
+    >>> adjacency_matrix = adjacency_matrix[:, 1::]
+    >>> # Reorganize colormap:
+    >>> from mindboggle.mio.colors import group_colors
+    >>> from mindboggle.mio.labels import DKTprotocol
+    >>> dkt = DKTprotocol()
+    >>> colormap_name = "DKT31colormap"
+    >>> description = "Colormap for DKT31 human brain cortical labels"
+    >>> save_text_files = True
+    >>> plot_colors = False
+    >>> plot_graphs = False
+    >>> out_dir = '.'
+    >>> verbose = False
+    >>> #IDs = dkt.DKT31_numbers
+    >>> names = dkt.DKT31_names #dkt.left_cerebrum_cortex_DKT31_names
+    >>> groups = dkt.DKT31_groups
+    >>> colors = group_colors(colormap, colormap_name, description,
+    ...     adjacency_matrix, IDs, names, groups,
+    ...     save_text_files, plot_colors, plot_graphs, out_dir, verbose)
+    >>> np.allclose(colors[0], [0.6206896551724138, 0.6551724137931034, 1.0])
+    True
+    >>> np.allclose(colors[1], [0.5172413793103449, 0.8275862068965517, 1.0])
+    True
+    >>> np.allclose(colors[2], [0.27586206896551724, 0.41379310344827586, 1.0])
+    True
+    >>> np.allclose(colors[-1], [0.0, 0.5862068965517241, 0.0])
+    True
+
+    No groups / subgraphs:
+
+    >>> groups = []
+    >>> colors = group_colors(colormap, colormap_name, description,
+    ...     adjacency_matrix, IDs, names, groups,
+    ...     save_text_files, plot_colors, plot_graphs, out_dir, verbose)
+    >>> np.allclose(colors[0], [0.48275862068965514, 0.4482758620689655, 0.48275862068965514])
+    True
+    >>> np.allclose(colors[1], [0.6206896551724138, 0.06896551724137931, 1.0])
+    True
+    >>> np.allclose(colors[2], [0.034482758620689655, 0.24137931034482757, 0.5862068965517241])
+    True
+    >>> np.allclose(colors[-1], [0.5172413793103449, 0.5862068965517241, 0.5172413793103449])
+    True
+
     """
     import itertools
     import os

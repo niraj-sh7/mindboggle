@@ -674,18 +674,17 @@ def decimate(
     # ------------------------------------------------------------------------
     # Extract decimated points, faces, and scalars:
     # ------------------------------------------------------------------------
-    points = [
-        list(out.GetPoint(point_id)) for point_id in range(out.GetNumberOfPoints())
-    ]
+    from vtk.util.numpy_support import vtk_to_numpy
+
+    points = vtk_to_numpy(out.GetPoints().GetData()).copy().tolist()
     if out.GetNumberOfPolys() > 0:
         polys = out.GetPolys()
         pt_data = out.GetPointData()
-        faces = [
-            [int(polys.GetData().GetValue(j)) for j in range(i * 4 + 1, i * 4 + 4)]
-            for i in range(polys.GetNumberOfCells())
-        ]
+        polys_array = vtk_to_numpy(polys.GetData()).copy()
+        faces = polys_array.reshape(-1, 4)[:, 1:4].tolist()
         if scalars:
-            scalars = [pt_data.GetScalars().GetValue(i) for i in range(len(points))]
+            scalars_array = vtk_to_numpy(pt_data.GetScalars()).copy()
+            scalars = scalars_array[: len(points)].tolist()
     else:
         faces = []
         scalars = []

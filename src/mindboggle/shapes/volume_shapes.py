@@ -61,7 +61,30 @@ def volume_per_brain_region(
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> import numpy as np
+    >>> from mindboggle.mio.labels import DKTprotocol
+    >>> from mindboggle.shapes.volume_shapes import volume_per_brain_region
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_file = fetch_data(urls['freesurfer_labels'], '', '.nii.gz')
+    >>> dkt = DKTprotocol()
+    >>> include_labels = dkt.label_numbers
+    >>> exclude_labels = []
+    >>> label_names = dkt.label_names
+    >>> save_table = True
+    >>> output_table = 'volumes.csv'
+    >>> verbose = False
+    >>> unique_labels, volumes, table = volume_per_brain_region(input_file,
+    ...     include_labels, exclude_labels, label_names, save_table,
+    ...     output_table, verbose)
+    >>> [np.float("{0:.{1}f}".format(x, 5))
+    ...  for x in [y for y in volumes if y > 0][0:5]]
+    [971.99799, 2413.99487, 2192.99536, 8328.98242, 2940.9939]
+    >>> [np.float("{0:.{1}f}".format(x, 5))
+    ...  for x in [y for y in volumes if y > 0][5:10]]
+    [1997.99585, 10905.97754, 11318.97656, 10789.97754, 2700.99438]
+
     """
     import os
 
@@ -72,7 +95,7 @@ def volume_per_brain_region(
 
     # Load labeled image volumes:
     img = nb.load(input_file)
-    volume_per_voxel = np.product(img.header.get_zooms())
+    volume_per_voxel = np.prod(img.header.get_zooms())
     labels = img.get_fdata().ravel()
 
     unique_labels, counts = count_per_label(labels, include_labels, exclude_labels)

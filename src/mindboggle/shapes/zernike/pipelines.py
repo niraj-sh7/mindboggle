@@ -19,7 +19,7 @@ LOG = logging.getLogger(__name__)
 #    LOG.debug(fn.__name__)
 #    return fn(*args, **dargs)
 
-IMAG_CONST = np.sqrt(-1)
+IMAG_CONST = complex(0, 1)
 PI_CONST = np.pi
 NAN_CONST = np.nan
 
