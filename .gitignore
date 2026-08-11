@@ -44,7 +44,12 @@ _$*
 *.tar.gz
 *.Z 
 *.zip
-
+*.vtk
+*.csv
+*.pkl
+label_colormap.json
+label_colormap.xml
+tests/golden/data/
 MANIFEST
 test_rest.sh
 test.sh

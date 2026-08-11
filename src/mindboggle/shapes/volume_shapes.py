@@ -95,7 +95,7 @@ def volume_per_brain_region(
 
     # Load labeled image volumes:
     img = nb.load(input_file)
-    volume_per_voxel = np.product(img.header.get_zooms())
+    volume_per_voxel = np.prod(img.header.get_zooms())
     labels = img.get_fdata().ravel()
 
     unique_labels, counts = count_per_label(labels, include_labels, exclude_labels)

@@ -244,15 +244,18 @@ def label_adjacency_matrix(
     >>> label_file = fetch_data(urls['left_manual_labels'], '', '.vtk')
     >>> labels, matrix, output_table = label_adjacency_matrix(label_file,
     ...     ignore_values, add_value, save_table, output_format, verbose)
-    >>> out = matrix.lookup([20,21,22,23,24,25,26,27,28,29],
-    ...               [35,35,35,35,35,35,35,35,35,35])
+    >>> rows = matrix.index.get_indexer([20,21,22,23,24,25,26,27,28,29])
+    >>> cols = matrix.columns.get_indexer([35,35,35,35,35,35,35,35,35,35])
+    >>> out = matrix.to_numpy()[rows, cols]
     >>> np.allclose(out, [ 0.,  1.,  0.,  0.,  0.,  0.,  0.,  1.,  1.,  1.])
     True
 
     >>> label_file = fetch_data(urls['freesurfer_labels'], '', '.nii.gz')
     >>> labels, matrix, output_table = label_adjacency_matrix(label_file,
     ...     ignore_values, add_value, save_table, output_format, verbose)
-    >>> out = matrix.lookup([4,5,7,8,10,11,12,13,14,15], [4,4,4,4,4,4,4,4,4,4])
+    >>> rows = matrix.index.get_indexer([4,5,7,8,10,11,12,13,14,15])
+    >>> cols = matrix.columns.get_indexer([4,4,4,4,4,4,4,4,4,4])
+    >>> out = matrix.to_numpy()[rows, cols]
     >>> np.allclose(out, [ 1.,  1.,  0.,  0.,  0.,  1.,  0.,  0.,  1.,  0.])
     True
 

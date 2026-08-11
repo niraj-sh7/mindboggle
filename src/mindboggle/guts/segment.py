@@ -362,7 +362,7 @@ def segment_regions(
     # ------------------------------------------------------------------------
     segments = background_value * np.ones(len(neighbor_lists))
     region_lists = [[] for x in seed_lists]
-    all_regions = []
+    all_regions = set()
     fully_grown = [False for x in seed_lists]
     new_segment_index = 0
     counter = 0
@@ -393,7 +393,7 @@ def segment_regions(
             if not fully_grown[ilist]:
                 # Add seeds to region:
                 region_lists[ilist].extend(seed_list)
-                all_regions.extend(seed_list)
+                all_regions.update(seed_list)
 
                 # Remove seeds from vertices to segment:
                 vertices_to_segment = list(
@@ -492,7 +492,7 @@ def segment_regions(
         while len(vertices_to_segment) >= min_region_size:
             # Add seeds to region:
             region.extend(seed_list)
-            all_regions.extend(seed_list)
+            all_regions.update(seed_list)
 
             # Remove seeds from vertices to segment:
             vertices_to_segment = list(
@@ -1145,14 +1145,14 @@ def watershed(
     segments = background_value * np.ones(len(depths))
     seed_indices = []
     seed_points = []
-    all_regions = []
+    all_regions = set()
     region = []
     counter = 0
     terminate = False
     while not terminate:
         # Add seeds to region:
         region.extend(seed_list)
-        all_regions.extend(seed_list)
+        all_regions.update(seed_list)
 
         # Remove seeds from vertices to segment:
         indices = list(frozenset(indices).difference(seed_list))
@@ -1229,7 +1229,7 @@ def watershed(
             print("  Regrow segments from watershed seeds, stopping at borders")
         indices = original_indices[:]
         segments = background_value * np.ones(len(depths))
-        all_regions = []
+        all_regions = set()
         for iseed, seed_index in enumerate(seed_indices):
             seed_list = [seed_index]
             region = []
@@ -1237,7 +1237,7 @@ def watershed(
             while not terminate:
                 # Add seeds to region:
                 region.extend(seed_list)
-                all_regions.extend(seed_list)
+                all_regions.update(seed_list)
 
                 # Remove seeds from vertices to segment:
                 indices = list(frozenset(indices).difference(seed_list))
@@ -1680,7 +1680,7 @@ def extract_borders(
         labels = np.array(labels)
 
     # Construct an array of labels corresponding to the neighbor lists:
-    L = np.array([list(set(labels[lst])) for lst in neighbor_lists])
+    L = np.array([list(set(labels[lst])) for lst in neighbor_lists], dtype=object)
 
     # Find indices to sets of two labels:
     border_indices = [
@@ -1899,7 +1899,7 @@ def combine_2labels_in_2volumes(file1, file2, label1=3, label2=2, output_file=""
     vol2 = nb.load(file2)
     data1 = vol1.get_fdata().ravel()
     data2 = vol2.get_fdata().ravel()
-    xfm = vol1.get_affine()
+    xfm = vol1.affine
     # ------------------------------------------------------------------------
     # Indices to voxels with label1 or label2 in two files:
     # ------------------------------------------------------------------------
@@ -1999,7 +1999,7 @@ def split_brain(image_file, label_file, left_labels, right_labels):
     dataR = volR.get_fdata().ravel()
     dataL[np.where(dataL != 0)[0]] = 1
     dataR[np.where(dataR != 0)[0]] = 1
-    xfm = vol.get_affine()
+    xfm = vol.affine
     # ------------------------------------------------------------------------
     # Split brain image by masking with left or right labels:
     # ------------------------------------------------------------------------

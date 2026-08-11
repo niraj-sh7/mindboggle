@@ -91,7 +91,7 @@ def point_distance(point, points):
     >>> point = [1,2,3]
     >>> points = [[10,2.0,3], [0,1.5,2]]
     >>> point_distance(point, points)
-    (np.float64(1.5), 1)
+    (1.5, 1)
 
     Notes
     -----
@@ -104,10 +104,12 @@ def point_distance(point, points):
     # If points is a single point
     if np.ndim(points) == 1:
         # return np.linalg.norm(np.array(point) - np.array(points))
-        return np.sqrt(
+        return float(
+            np.sqrt(
             (point[0] - points[0]) ** 2
             + (point[1] - points[1]) ** 2
             + (point[2] - points[2]) ** 2
+            )
         ), 0
 
     # If points is a set of multiple points
@@ -127,7 +129,7 @@ def point_distance(point, points):
             if distance < min_distance:
                 min_distance = distance
                 min_index = index
-        return min_distance, min_index
+        return float(min_distance), min_index
 
     # Else return None
     else:
@@ -386,7 +388,7 @@ def weighted_to_repeated_values(X, W=[], precision=1):
     >>> W = np.array([.1,.1,.3,.2,.3])
     >>> precision = 1
     >>> weighted_to_repeated_values(X, W, precision)
-    [np.int64(1), np.int64(2), np.int64(4), np.int64(4), np.int64(4), np.int64(7), np.int64(7), np.int64(8), np.int64(8), np.int64(8)]
+    [1, 2, 4, 4, 4, 7, 7, 8, 8, 8]
 
     """
     import numpy as np
@@ -414,11 +416,16 @@ def weighted_to_repeated_values(X, W=[], precision=1):
 
         if not whole:
             W = [int(np.round(x)) for x in W]
+        else:
+            W = [int(x) for x in W]
 
-        repeat_values = sum([[x] * w for x, w in zip(X, W)], [])
+        repeat_values = sum(
+            [[x.item() if hasattr(x, "item") else x] * int(w) for x, w in zip(X, W)],
+            [],
+        )
 
     else:
-        repeat_values = X
+        repeat_values = [x.item() if hasattr(x, "item") else x for x in X]
 
     return repeat_values
 
@@ -450,7 +457,7 @@ def weighted_median(X, W=[], precision=1):
     >>> precision = 1
     >>> # [1, 2, 4, 4, 4, 7, 7, 8, 8, 8]
     >>> weighted_median(X, W, precision)
-    np.float64(5.5)
+    5.5
 
     """
     import numpy as np
@@ -467,7 +474,7 @@ def weighted_median(X, W=[], precision=1):
 
     wmedian = np.median(weighted_to_repeated_values(X, W, precision))
 
-    return wmedian
+    return float(wmedian)
 
 
 def median_abs_dev(X, W=[], precision=1, c=1.0):
@@ -502,7 +509,7 @@ def median_abs_dev(X, W=[], precision=1, c=1.0):
     >>> precision = 1
     >>> # [1, 2, 4, 4, 4, 7, 7, 8, 8, 8]
     >>> median_abs_dev(X, W, precision)
-    np.float64(2.0)
+    2.0
 
     """
     import numpy as np
@@ -522,7 +529,7 @@ def median_abs_dev(X, W=[], precision=1, c=1.0):
 
     mad = np.median(np.abs(X - np.median(X))) / c
 
-    return mad
+    return float(mad)
 
 
 def means_per_label(values, labels, include_labels=[], exclude_labels=[], areas=[]):

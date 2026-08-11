@@ -82,7 +82,7 @@ conda install -y -q --name mb \
     'nipype>=1.1.4' \
     'nilearn' \
     'tbb-devel' \
-    'nose' \
+    'pytest' \
     'etelemetry'
 sync && conda clean -tipsy && sync
 bash -c "source activate mb
@@ -233,7 +233,7 @@ echo '{
 \n          "nipype>=1.1.4",
 \n          "nilearn",
 \n          "tbb-devel",
-\n          "nose",
+\n          "pytest",
 \n          "etelemetry"
 \n        ],
 \n        "pip_install": [
