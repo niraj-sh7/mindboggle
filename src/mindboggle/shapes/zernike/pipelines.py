@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-import scipy
 from scipy.special import (
     comb as nchoosek,
 )
@@ -20,9 +19,9 @@ LOG = logging.getLogger(__name__)
 #    LOG.debug(fn.__name__)
 #    return fn(*args, **dargs)
 
-IMAG_CONST = scipy.sqrt(-1)
+IMAG_CONST = np.sqrt(-1)
 PI_CONST = np.pi
-NAN_CONST = np.NaN
+NAN_CONST = np.nan
 
 
 class Pipeline:

@@ -118,8 +118,8 @@ def weight_graph(
     ...                                   add_to_graph, G, sigma, verbose)
     >>> G.size()
     9
-    >>> sorted(dict(G.degree()).items())
-    [(0.0, 4), (1.0, 4), (2.0, 3), (3.0, 4), (4.0, 3)]
+    >>> sorted([(int(k), v) for k, v in dict(G.degree()).items()])
+    [(0, 4), (1, 4), (2, 3), (3, 4), (4, 3)]
 
     """
     import numpy as np
@@ -144,11 +144,11 @@ def weight_graph(
         weighted_edges = np.asarray(
             [
                 [
-                    Indices[np.int(i)],
-                    Indices[np.int(j)],
+                    Indices[int(i)],
+                    Indices[int(j)],
                     kernel(
-                        Nodes[np.int(Indices[np.int(i)])],
-                        Nodes[np.int(Indices[np.int(j)])],
+                        Nodes[int(Indices[int(i)])],
+                        Nodes[int(Indices[int(j)])],
                         sigma,
                     ),
                 ]
@@ -167,7 +167,9 @@ def weight_graph(
             print(f"Construct sparse affinity matrix of size {Nodes.shape[0]}")
         affinity_matrix = lil_matrix((Nodes.shape[0], Nodes.shape[0]))
         for [i, j, edge_weight] in weighted_edges:
-            affinity_matrix[i, j] = affinity_matrix[j, i] = edge_weight
+            affinity_matrix[int(i), int(j)] = affinity_matrix[int(j), int(i)] = (
+                edge_weight
+            )
 
     # elif kernel is cotangent_kernel:
     #     if verbose:
@@ -230,7 +232,7 @@ def graph_laplacian(W, type_of_laplacian="norm1", verbose=False):
     >>> W
     array([[1, 0, 2],
            [0, 0, 3],
-           [4, 5, 6]], dtype=int64)
+           [4, 5, 6]])
     >>> type_of_laplacian = 'norm1'
     >>> verbose = False
     >>> Laplacian = graph_laplacian(W, type_of_laplacian, verbose)

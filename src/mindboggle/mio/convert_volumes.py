@@ -21,7 +21,7 @@ def convert2nii(input_file, reference_file, output_file="", interp="continuous")
         from nilearn.image import resample_img
         resliced = resample_img(input_file, target_affine=xfm2,
                                 target_shape=dim2,
-                                interpolation=interp).get_data()
+                                interpolation=interp).get_fdata()
 
     Example use: Convert FreeSurfer 'unconformed' .mgz file to nifti.
 
@@ -83,7 +83,7 @@ def convert2nii(input_file, reference_file, output_file="", interp="continuous")
     # Resample the source image according to the reference image:
     # ------------------------------------------------------------------------
     vol1 = nb.load(input_file)
-    dat1 = vol1.get_data()
+    dat1 = vol1.get_fdata()
     xfm1 = vol1.affine
     if np.all(xfm2 == xfm1):
         transform_affine = np.eye(4)

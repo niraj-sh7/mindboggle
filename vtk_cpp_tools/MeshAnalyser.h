@@ -24,6 +24,7 @@
 #include <vtkMath.h>
 #include <vector>
 #include <vtkCellLocator.h>
+#include <vtkPointLocator.h>
 
 
 #define pi 3.14159265358979323846

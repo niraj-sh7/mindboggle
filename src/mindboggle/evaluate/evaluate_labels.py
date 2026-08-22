@@ -68,8 +68,8 @@ def evaluate_volume_overlaps(labels, file1, file2, output_file="", save_output=T
     from mindboggle.guts.compute import compute_overlaps
 
     # Load labeled image volumes:
-    list1 = nb.load(file1).get_data().ravel()
-    list2 = nb.load(file2).get_data().ravel()
+    list1 = nb.load(file1).get_fdata().ravel()
+    list2 = nb.load(file2).get_fdata().ravel()
 
     dice_overlaps, jacc_overlaps, output_file = compute_overlaps(
         labels, list1, list2, output_file=output_file, save_output=save_output

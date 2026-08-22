@@ -63,7 +63,7 @@ def relabel_volume(input_file, old_labels, new_labels, output_file=""):
     # Load labeled image volume and extract data as 1-D array
     vol = nb.load(input_file)
     xfm = vol.get_affine()
-    data = vol.get_data().ravel()
+    data = vol.get_fdata().ravel()
 
     # Initialize output
     new_data = data.copy()
@@ -148,7 +148,7 @@ def remove_volume_labels(input_file, labels_to_remove, output_file="", second_fi
     # ------------------------------------------------------------------------
     vol = nb.load(input_file)
     xfm = vol.get_affine()
-    data = vol.get_data().ravel()
+    data = vol.get_fdata().ravel()
 
     # ------------------------------------------------------------------------
     # If second file specified, erase voxels whose corresponding
@@ -158,7 +158,7 @@ def remove_volume_labels(input_file, labels_to_remove, output_file="", second_fi
         # Load second image volume and extract data as 1-D array:
         vol = nb.load(second_file)
         xfm = vol.get_affine()
-        new_data = vol.get_data().ravel()
+        new_data = vol.get_fdata().ravel()
         if not output_file:
             output_file = os.path.join(os.getcwd(), os.path.basename(second_file))
     # ------------------------------------------------------------------------
@@ -246,7 +246,7 @@ def keep_volume_labels(input_file, labels_to_keep, output_file="", second_file="
     # ------------------------------------------------------------------------
     vol = nb.load(input_file)
     xfm = vol.get_affine()
-    data = vol.get_data().ravel()
+    data = vol.get_fdata().ravel()
 
     # ------------------------------------------------------------------------
     # If second file specified, erase voxels whose corresponding
@@ -256,7 +256,7 @@ def keep_volume_labels(input_file, labels_to_keep, output_file="", second_file="
         # Load second image volume and extract data as 1-D array:
         vol = nb.load(second_file)
         xfm = vol.get_affine()
-        new_data = vol.get_data().ravel()
+        new_data = vol.get_fdata().ravel()
         if not output_file:
             output_file = os.path.join(os.getcwd(), os.path.basename(second_file))
     # ------------------------------------------------------------------------
@@ -509,8 +509,8 @@ def overwrite_volume_labels(
     if vol_source.shape != vol_target.shape:
         raise OSError(f"{source} and {target} need to be the same shape.")
     xfm = vol_target.get_affine()
-    data_source = vol_source.get_data().ravel()
-    data_target = vol_target.get_data().ravel()
+    data_source = vol_source.get_fdata().ravel()
+    data_target = vol_target.get_fdata().ravel()
 
     # Initialize output:
     new_data = data_target.copy()

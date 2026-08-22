@@ -69,7 +69,7 @@ def zernike_moments(
     >>> verbose = False
     >>> descriptors = zernike_moments(points, faces, order, scale_input,
     ...     decimate_fraction, decimate_smooth, verbose)
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors]
     [0.09189, 0.09357, 0.04309, 0.06466, 0.0382, 0.04138]
 
     Example 2: Twins-2-1 left postcentral pial surface -- NO decimation:
@@ -91,7 +91,7 @@ def zernike_moments(
     >>> verbose = False
     >>> descriptors = zernike_moments(points, faces, order, scale_input,
     ...     decimate_fraction, decimate_smooth, verbose)
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors]
     [0.00471, 0.0084, 0.00295, 0.00762, 0.0014, 0.00076]
 
     Example 3: left postcentral + pars triangularis pial surfaces:
@@ -109,7 +109,7 @@ def zernike_moments(
     >>> verbose = False
     >>> descriptors = zernike_moments(points, faces, order, scale_input,
     ...     decimate_fraction, decimate_smooth, verbose)
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors]
     [0.00586, 0.00973, 0.00322, 0.00818, 0.0013, 0.00131]
 
     View both segments (skip test):
@@ -243,15 +243,15 @@ def zernike_moments_per_label(
     ...     order, exclude_labels, scale_input, verbose)
     >>> label_list[0:10]
     [999, 1001, 1002, 1003, 1005, 1006, 1007, 1008, 1009, 1010]
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[0]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[0]]
     [0.00587, 0.01143, 0.0031, 0.00881, 0.00107, 0.00041]
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[1]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[1]]
     [4e-05, 9e-05, 3e-05, 9e-05, 2e-05, 1e-05]
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[2]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[2]]
     [0.00144, 0.00232, 0.00128, 0.00304, 0.00084, 0.00051]
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[3]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[3]]
     [0.00393, 0.006, 0.00371, 0.00852, 0.00251, 0.00153]
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[4]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[4]]
     [0.00043, 0.0003, 0.00095, 0.00051, 0.00115, 0.00116]
 
     """

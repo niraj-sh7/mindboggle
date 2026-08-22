@@ -283,7 +283,7 @@ def label_adjacency_matrix(
 
     # Use scipy to dilate volume files to find neighboring labels:
     elif label_file.endswith(".nii.gz"):
-        L = load(label_file).get_data()
+        L = load(label_file).get_fdata()
         unique_volume_labels = np.unique(L)
 
         label_pairs = []

@@ -1,21 +1,20 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5...4.4)
 
-# Find VTK:
-find_package(VTK REQUIRED NO_MODULE)
-include(${VTK_USE_FILE})
-
-# This project is designed to be built outside the Insight source tree:
 project(point_area)
 
 add_executable(
-PointAreaMain PointAreaMain.cpp
+  PointAreaMain
+  PointAreaMain.cpp
 )
-install(TARGETS PointAreaMain
-    RUNTIME DESTINATION bin)
+
+install(
+  TARGETS PointAreaMain
+  RUNTIME DESTINATION bin
+)
 
 target_link_libraries(
-PointAreaMain
-MeshAnalyser
-PointAreaComputer
-${VTK_LIBRARIES}
+  PointAreaMain
+  PRIVATE
+  MeshAnalyser
+  PointAreaComputer
 )

@@ -367,7 +367,7 @@ def segment_regions(
     new_segment_index = 0
     counter = 0
     if isinstance(max_steps, str):
-        max_steps = np.Inf
+        max_steps = np.inf
 
     # ------------------------------------------------------------------------
     # If label_lists empty, set to unique labels for each seed list:
@@ -1758,7 +1758,7 @@ def extract_borders_2nd_surface(
     >>> output_file = 'extract_borders_2nd_surface.vtk'
     >>> border_file, values, I = extract_borders_2nd_surface(label_file,
     ...     values_file, output_file, background_value)
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in np.unique(values)[0:8]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in np.unique(values)[0:8]]
     [-1.0, 0.0, 0.00012, 0.00023, 0.00032, 0.00044, 0.00047, 0.00051]
     >>> I[0:10]
     [115, 116, 120, 121, 125, 126, 130, 131, 281, 286]
@@ -1897,8 +1897,8 @@ def combine_2labels_in_2volumes(file1, file2, label1=3, label2=2, output_file=""
     # ------------------------------------------------------------------------
     vol1 = nb.load(file1)
     vol2 = nb.load(file2)
-    data1 = vol1.get_data().ravel()
-    data2 = vol2.get_data().ravel()
+    data1 = vol1.get_fdata().ravel()
+    data2 = vol2.get_fdata().ravel()
     xfm = vol1.get_affine()
     # ------------------------------------------------------------------------
     # Indices to voxels with label1 or label2 in two files:
@@ -1994,9 +1994,9 @@ def split_brain(image_file, label_file, left_labels, right_labels):
     vol = nb.load(image_file)
     volL = nb.load(left_brain)
     volR = nb.load(right_brain)
-    data = vol.get_data().ravel()
-    dataL = volL.get_data().ravel()
-    dataR = volR.get_data().ravel()
+    data = vol.get_fdata().ravel()
+    dataL = volL.get_fdata().ravel()
+    dataR = volR.get_fdata().ravel()
     dataL[np.where(dataL != 0)[0]] = 1
     dataR[np.where(dataR != 0)[0]] = 1
     xfm = vol.get_affine()

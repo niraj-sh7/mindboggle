@@ -302,9 +302,9 @@ else:
     def mask_labels(intensity_image, label_image, output_dir=None):
         import nibabel as nb
         import os
-        thick_data = nb.load(intensity_image).get_data() > 0
+        thick_data = nb.load(intensity_image).get_fdata() > 0
         limg = nb.load(label_image)
-        label_data = limg.get_data()
+        label_data = limg.get_fdata()
         new_labels = thick_data * label_data * (label_data >= 1000) + \
                      (label_data < 1000) * label_data
         new_label_img = nb.Nifti1Image(new_labels,

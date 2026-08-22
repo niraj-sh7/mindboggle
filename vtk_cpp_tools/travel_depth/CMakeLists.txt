@@ -1,22 +1,20 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5...4.4)
 
-# Find VTK:
-find_package(VTK REQUIRED NO_MODULE)
-#find_package(VTK 7.0 COMPONENTS vtkInteractionStyle vtkRenderingFreeType vtkRenderingOpenGL2 vtkRenderingVolumeOpenGL2 NO_MODULE)
-include(${VTK_USE_FILE})
-
-# This project is designed to be built outside the Insight source tree:
 project(travel_depth)
 
 add_executable(
-TravelDepthMain TravelDepthMain.cpp
+  TravelDepthMain
+  TravelDepthMain.cpp
 )
-install(TARGETS TravelDepthMain
-    RUNTIME DESTINATION bin)
+
+install(
+  TARGETS TravelDepthMain
+  RUNTIME DESTINATION bin
+)
 
 target_link_libraries(
-TravelDepthMain
-TravelDepth
-MeshAnalyser
-${VTK_LIBRARIES}
+  TravelDepthMain
+  PRIVATE
+  TravelDepth
+  MeshAnalyser
 )

@@ -1,22 +1,23 @@
-# http://www.vtk.org/Wiki/VTK/Tutorials/CMakeListsFile
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5...4.4)
 project(mindboggle_surfaces)
-## Rather than set the VTK_DIR, compile with
-## "cmake .. -DVTK_DIR:STRING=/Users/arno/anaconda/lib/cmake/vtk-7.0"
-#set(VTK_DIR "/Users/arno/anaconda/lib/cmake/vtk-7.0")
-#find_package(VTK REQUIRED NO_MODULE)
-find_package(VTK 8.1 COMPONENTS vtkInteractionStyle vtkRenderingFreeType vtkRenderingOpenGL2 vtkRenderingVolumeOpenGL2 vtkIOLegacy vtkIOMINC vtkIOGeometry vtkImagingStencil vtkImagingMorphological vtkFiltersModeling NO_MODULE)
-include(${VTK_USE_FILE})
 
-#if(COMMAND CMAKE_POLICY)
-#  CMAKE_POLICY(SET CMP0003 NEW)
-#endif(COMMAND CMAKE_POLICY)
-
-# David Gobbi on vtkusers mailing list:
-# For building a binary package to share with others,
-# set to a reasonably old deployment target (e.g. 10.7) and SDK (e.g. 10.9):
-#set(CMAKE_OSX_DEPLOYMENT_TARGET "10.7")
-#set(CMAKE_OSX_SYSROOT "macosx10.9")
+find_package(VTK REQUIRED COMPONENTS
+  CommonCore
+  CommonDataModel
+  CommonExecutionModel
+  CommonMisc
+  FiltersCore
+  FiltersGeneral
+  FiltersModeling
+  FiltersSources
+  IOLegacy
+  IOGeometry
+  IOMINC
+  ImagingCore
+  ImagingGeneral
+  ImagingStencil
+  ImagingMorphological
+)
 
 add_subdirectory(
 travel_depth
@@ -46,50 +47,60 @@ geodesic_depth
 #medial_surfaces
 #)
 
-add_library(
-MeshAnalyser MeshAnalyser.cpp
+add_library(MeshAnalyser MeshAnalyser.cpp)
+target_link_libraries(MeshAnalyser PUBLIC
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::CommonExecutionModel
+  VTK::CommonMisc
+  VTK::FiltersCore
+  VTK::FiltersGeneral
+  VTK::FiltersModeling
+  VTK::FiltersSources
+  VTK::IOLegacy
+  VTK::IOGeometry
+  VTK::IOMINC
+  VTK::ImagingCore
+  VTK::ImagingGeneral
+  VTK::ImagingStencil
+  VTK::ImagingMorphological
 )
-install(TARGETS MeshAnalyser
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
-
-add_library(
-FsSurfaceReader FsSurfaceReader.cpp
-)
-
-add_library(
-VtkFileEditor VtkFileEditor.cpp
-)
-
-add_library(
-TravelDepth TravelDepth.cpp
-)
-
-add_library(
-Overlap Overlap.cpp
-)
-
-add_library(
-GradientComputer GradientComputer.cpp
+add_library(FsSurfaceReader FsSurfaceReader.cpp)
+target_link_libraries(FsSurfaceReader PUBLIC
+  VTK::CommonCore
+  VTK::CommonDataModel
 )
 
-add_library(
-PointAreaComputer PointAreaComputer.cpp
+add_library(VtkFileEditor VtkFileEditor.cpp)
+target_link_libraries(VtkFileEditor PUBLIC
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::IOLegacy
 )
 
-target_link_libraries(
-MeshAnalyser
+add_library(TravelDepth TravelDepth.cpp)
+target_link_libraries(TravelDepth PUBLIC
+  VTK::CommonCore
+  VTK::CommonDataModel
+  MeshAnalyser
 )
 
-target_link_libraries(
-TravelDepth
+add_library(GradientComputer GradientComputer.cpp)
+target_link_libraries(GradientComputer PUBLIC
+  VTK::CommonCore
+  VTK::CommonDataModel
 )
 
-target_link_libraries(
-GradientComputer
+add_library(PointAreaComputer PointAreaComputer.cpp)
+target_link_libraries(PointAreaComputer PUBLIC
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::IOLegacy
 )
 
-target_link_libraries(
-Overlap
-PointAreaComputer
+add_library(Overlap Overlap.cpp)
+target_link_libraries(Overlap PUBLIC
+  PointAreaComputer
+  VTK::CommonCore
+  VTK::CommonDataModel
 )

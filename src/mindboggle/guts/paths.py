@@ -80,7 +80,7 @@ def connect_points_erosion(
     >>> depths, name = read_scalars(depth_file, True, True)
     >>> folds, name = read_scalars(folds_file, True, True)
     >>> values = depths * curvs
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in values[0:5]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in values[0:5]]
     [-0.11778, -0.35642, -0.80759, -0.25654, -0.04411]
     >>> neighbor_lists = find_neighbors_from_file(curv_file)
     >>> background_value = -1
@@ -511,7 +511,7 @@ def connect_points_hmmf(
     N_array_shape = np.shape(N_array)
     N_flat = np.ravel(N_array)
     N_flat_list = N_flat.tolist()
-    H_N = np.reshape(H[[np.int(x) for x in N_flat_list]], N_array_shape)
+    H_N = np.reshape(H[[int(x) for x in N_flat_list]], N_array_shape)
     ind_flat = [i for i, x in enumerate(N_flat_list) if x > 0]
     len_flat = len(N_flat_list)
 
@@ -540,7 +540,7 @@ def connect_points_hmmf(
         # Update neighborhood H values:
         # H_N = np.reshape(H[N_flat_list], N_array_shape)
         H_N = np.zeros(len_flat)
-        H_N[ind_flat] = H[[np.int(x) for x in N_flat[ind_flat]]]
+        H_N[ind_flat] = H[[int(x) for x in N_flat[ind_flat]]]
         H_N = np.reshape(H_N, N_array_shape)
 
         # Compute the cost gradient for the HMMF values:
@@ -727,7 +727,7 @@ def smooth_skeletons(
     >>> depths, name = read_scalars(depth_file, True, True)
     >>> vtk_file = curv_file
     >>> likelihoods = depths * curvs
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in likelihoods[0:5]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in likelihoods[0:5]]
     [-0.11778, -0.35642, -0.80759, -0.25654, -0.04411]
     >>> bounds, name = read_scalars(folds_file, True, True)
     >>> skeletons, name = read_scalars(fundus_file, True, True)
@@ -1315,7 +1315,7 @@ def find_max_values(points, values, min_separation=10, thr=0.5):
     >>> points, f1,f2,f3, curvs, f4,f5,f6 = read_vtk(curv_file, True,True)
     >>> depths, name = read_scalars(depth_file, True, True)
     >>> values = depths * curvs
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in values[0:5]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in values[0:5]]
     [-0.11778, -0.35642, -0.80759, -0.25654, -0.04411]
     >>> min_separation = 10
     >>> values0 = [x for x in values if x > 0]
@@ -1439,7 +1439,7 @@ def find_max_values(points, values, min_separation=10, thr=0.5):
 #     >>> seed
 #     65804
 #     >>> values = depths
-#     >>> [np.float("{0:.{1}f}".format(x, 5)) values[0:5]]
+#     >>> [float("{0:.{1}f}".format(x, 5)) values[0:5]]
 #     [0.02026, 0.06009, 0.12859, 0.04564, 0.00774]
 #     >>> sink = []
 #     >>> track = track_values(seed, indices, neighbor_lists, values, sink)
@@ -1448,13 +1448,13 @@ def find_max_values(points, values, min_separation=10, thr=0.5):
 #
 #     View track in fold on surface (skip test):
 #
-#     >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
-#     >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+#     >>> from mindboggle.mio.vtks import rewrite_scalars
+#     >>> from mindboggle.mio.plots import plot_surfaces
 #     >>> folds_copy = np.copy(folds)
-#     >>> folds_copy[track] = 10 # doctest: +SKIP
-#     >>> folds_copy[seed] = 15 # doctest: +SKIP
-#     >>> rewrite_scalars(depth_file, 'track.vtk', folds_copy, 'track', folds) # doctest: +SKIP
-#     >>> plot_surfaces('track.vtk') # doctest: +SKIP
+#     >>> folds_copy[track] = 10
+#     >>> folds_copy[seed] = 15
+#     >>> rewrite_scalars(depth_file, 'track.vtk', folds_copy, 'track', folds)
+#     >>> plot_surfaces('track.vtk')
 #
 #     """
 #     import numpy as np
