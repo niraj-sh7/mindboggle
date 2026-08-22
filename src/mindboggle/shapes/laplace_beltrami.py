@@ -207,7 +207,22 @@ def area_normalize(points, faces, spectrum):
 
     Examples
     --------
-    >>> pass
+    >>> import numpy as np
+    >>> from mindboggle.shapes.laplace_beltrami import area_normalize
+    >>> from mindboggle.shapes.laplace_beltrami import fem_laplacian
+    >>> # Define a cube:
+    >>> points = [[0,0,0], [0,1,0], [1,1,0], [1,0,0],
+    ...           [0,0,1], [0,1,1], [1,1,1], [1,0,1]]
+    >>> faces = [[0,1,2], [2,3,0], [4,5,6], [6,7,4], [0,4,7], [7,3,0],
+    ...          [0,4,5], [5,1,0], [1,5,6], [6,2,1], [3,7,6], [6,2,3]]
+    >>> spectrum = fem_laplacian(points, faces, spectrum_size=3,
+    ...                          normalization=None)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [4.58359, 4.8]
+    >>> new_spectrum = area_normalize(points, faces, spectrum)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in new_spectrum[1::]]
+    [27.50155, 28.8]
+
     """
     from mindboggle.guts.mesh import area_of_faces
 
@@ -237,7 +252,22 @@ def index_normalize(spectrum):
 
     Examples
     --------
-    >>> pass
+    >>> import numpy as np
+    >>> from mindboggle.shapes.laplace_beltrami import area_normalize
+    >>> from mindboggle.shapes.laplace_beltrami import fem_laplacian
+    >>> # Define a cube:
+    >>> points = [[0,0,0], [0,1,0], [1,1,0], [1,0,0],
+    ...           [0,0,1], [0,1,1], [1,1,1], [1,0,1]]
+    >>> faces = [[0,1,2], [2,3,0], [4,5,6], [6,7,4], [0,4,7], [7,3,0],
+    ...          [0,4,5], [5,1,0], [1,5,6], [6,2,1], [3,7,6], [6,2,3]]
+    >>> spectrum = fem_laplacian(points, faces, spectrum_size=3,
+    ...                          normalization=None)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [4.58359, 4.8]
+    >>> new_spectrum = index_normalize(spectrum)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in new_spectrum[1::]]
+    [4.58359, 2.4]
+
     """
 
     # define index list of floats
@@ -397,7 +427,46 @@ def fem_laplacian(
 
     Examples
     --------
-    >>> pass
+    >>> import numpy as np
+    >>> from mindboggle.shapes.laplace_beltrami import fem_laplacian
+    >>> # Define a cube:
+    >>> points = [[0,0,0], [0,1,0], [1,1,0], [1,0,0],
+    ...           [0,0,1], [0,1,1], [1,1,1], [1,0,1]]
+    >>> faces = [[0,1,2], [2,3,0], [4,5,6], [6,7,4], [0,4,7], [7,3,0],
+    ...          [0,4,5], [5,1,0], [1,5,6], [6,2,1], [3,7,6], [6,2,3]]
+    >>> spectrum = fem_laplacian(points, faces, spectrum_size=3,
+    ...                          normalization=None, verbose=False)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [4.58359, 4.8]
+    >>> spectrum = fem_laplacian(points, faces, spectrum_size=3,
+    ...                          normalization="area", verbose=False)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [27.50155, 28.8]
+    >>> # Spectrum for entire left hemisphere of Twins-2-1:
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> points, f1,f2, faces, labels, f3,f4,f5 = read_vtk(label_file)
+    >>> spectrum = fem_laplacian(points, faces, spectrum_size=6,
+    ...                          normalization=None, verbose=False)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [0.00013, 0.00027, 0.00032, 0.00047, 0.00058]
+    >>> # Spectrum for Twins-2-1 left postcentral pial surface (22):
+    >>> from mindboggle.guts.mesh import keep_faces, reindex_faces_points
+    >>> I22 = [i for i,x in enumerate(labels) if x==1022] # postcentral
+    >>> faces = keep_faces(faces, I22)
+    >>> faces, points, o1 = reindex_faces_points(faces, points)
+    >>> spectrum = fem_laplacian(points, faces, spectrum_size=6,
+    ...                          normalization=None, verbose=False)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [0.00057, 0.00189, 0.00432, 0.00691, 0.00775]
+    >>> # Area-normalized spectrum for a single label (postcentral):
+    >>> spectrum = fem_laplacian(points, faces, spectrum_size=6,
+    ...                          normalization="area", verbose=False)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [2.69259, 8.97865, 20.44857, 32.74477, 36.739]
+
     """
     import numpy as np
     from scipy.sparse.linalg import eigsh, lobpcg
@@ -519,7 +588,42 @@ def spectrum_of_largest(
 
     Examples
     --------
-    >>> pass
+    >>> # Spectrum for left postcentral + pars triangularis pial surfaces:
+    >>> import numpy as np
+    >>> from mindboggle.mio.vtks import read_scalars, read_vtk, write_vtk
+    >>> from mindboggle.guts.mesh import keep_faces, reindex_faces_points
+    >>> from mindboggle.shapes.laplace_beltrami import spectrum_of_largest
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> spectrum_size = 6
+    >>> exclude_labels = [-1]
+    >>> normalization = None
+    >>> points, indices, lines, faces, labels, f1, npoints, f2 = read_vtk(label_file,
+    ...     return_first=True, return_array=True)
+    >>> I20 = [i for i,x in enumerate(labels) if x==1020] # pars triangularis
+    >>> I22 = [i for i,x in enumerate(labels) if x==1022] # postcentral
+    >>> I22.extend(I20)
+    >>> faces = keep_faces(faces, I22)
+    >>> faces, points, o1 = reindex_faces_points(faces, points)
+    >>> areas, u1 = read_scalars(area_file, True, True)
+    >>> verbose = False
+    >>> spectrum = spectrum_of_largest(points, faces, spectrum_size,
+    ...     exclude_labels, normalization, areas, verbose)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [0.00057, 0.00189, 0.00432, 0.00691, 0.00775]
+
+    View both segments (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> scalars = np.zeros(np.shape(labels))
+    >>> scalars[I22] = 1
+    >>> vtk_file = 'test_two_labels.vtk'
+    >>> write_vtk(vtk_file, points, indices, lines, faces,
+    ...           scalars, scalar_names='scalars', scalar_type='int')
+    >>> plot_surfaces(vtk_file) # doctest: +SKIP
+
     """
     import numpy as np
 
@@ -600,7 +704,22 @@ def spectrum_from_file(
 
     Examples
     --------
-    >>> pass
+    >>> # Spectrum for entire left hemisphere of Twins-2-1:
+    >>> import numpy as np
+    >>> from mindboggle.shapes.laplace_beltrami import spectrum_from_file
+    >>> from mindboggle.shapes.laplace_beltrami import spectrum_per_label
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> spectrum = spectrum_from_file(vtk_file, spectrum_size=6,
+    ...     exclude_labels=[-1], normalization=None, area_file="", verbose=False)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [0.00013, 0.00027, 0.00032, 0.00047, 0.00058]
+    >>> spectrum = spectrum_from_file(vtk_file, spectrum_size=6,
+    ...     exclude_labels=[-1], normalization="areaindex", area_file="",
+    ...     verbose=False)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum[1::]]
+    [14.12801, 14.93573, 11.75397, 12.93141, 12.69348]
     """
     from mindboggle.mio.vtks import read_scalars, read_vtk
     from mindboggle.shapes.laplace_beltrami import spectrum_of_largest
@@ -664,7 +783,26 @@ def spectrum_per_label(
 
     Examples
     --------
-    >>> pass
+    >>> # Uncomment "if label==22:" below to run example:
+    >>> # Spectrum for Twins-2-1 left postcentral (22) pial surface:
+    >>> import numpy as np
+    >>> from mindboggle.shapes.laplace_beltrami import spectrum_per_label
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> spectrum_size = 6
+    >>> exclude_labels = [0]  #[-1]
+    >>> largest_segment = True
+    >>> verbose = False
+    >>> spectrum_lists, label_list = spectrum_per_label(vtk_file,
+    ...     spectrum_size, exclude_labels, None, area_file, largest_segment,
+    ...     verbose)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in spectrum_lists[0][1::]]
+    [0.00054, 0.00244, 0.00291, 0.00456, 0.00575]
+    >>> label_list[0:10]
+    [1029, 1005, 1011, 1021, 1008, 1025, 999, 1013, 1007, 1022]
+
     """
     from mindboggle.guts.mesh import keep_faces, reindex_faces_points
     from mindboggle.mio.vtks import read_scalars, read_vtk

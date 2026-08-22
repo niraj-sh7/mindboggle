@@ -61,7 +61,30 @@ def volume_per_brain_region(
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> import numpy as np
+    >>> from mindboggle.mio.labels import DKTprotocol
+    >>> from mindboggle.shapes.volume_shapes import volume_per_brain_region
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_file = fetch_data(urls['freesurfer_labels'], '', '.nii.gz')
+    >>> dkt = DKTprotocol()
+    >>> include_labels = dkt.label_numbers
+    >>> exclude_labels = []
+    >>> label_names = dkt.label_names
+    >>> save_table = True
+    >>> output_table = 'volumes.csv'
+    >>> verbose = False
+    >>> unique_labels, volumes, table = volume_per_brain_region(input_file,
+    ...     include_labels, exclude_labels, label_names, save_table,
+    ...     output_table, verbose)
+    >>> [float("{0:.{1}f}".format(x, 5))
+    ...  for x in [y for y in volumes if y > 0][0:5]]
+    [971.99797, 2413.99496, 2192.99543, 8328.98262, 2940.99386]
+    >>> [float("{0:.{1}f}".format(x, 5))
+    ...  for x in [y for y in volumes if y > 0][5:10]]
+    [1997.99583, 10905.97725, 11318.97639, 10789.97749, 2700.99437]
+
     """
     import os
 
@@ -236,9 +259,9 @@ def thickinthehead(
     >>> label_volume_thickness, output_table = thickinthehead(segmented_file,
     ...     labeled_file, cortex_value, noncortex_value, labels, names,
     ...     propagate, output_dir, save_table, output_table, verbose) # doctest: +SKIP
-    >>> [np.int("{0:.{1}f}".format(x, 5)) label_volume_thickness[0][0:10]] # doctest: +SKIP
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in label_volume_thickness[1][0:5]] # doctest: +SKIP
-    >>> [np.float("{0:.{1}f}".format(x, 5)) for x in label_volume_thickness[2][0:5]] # doctest: +SKIP
+    >>> [int("{0:.{1}f}".format(x, 5)) label_volume_thickness[0][0:10]] # doctest: +SKIP
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in label_volume_thickness[1][0:5]] # doctest: +SKIP
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in label_volume_thickness[2][0:5]] # doctest: +SKIP
 
     """
     import os

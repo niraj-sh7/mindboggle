@@ -25,8 +25,110 @@ def connect_points_erosion(
     verbose=False,
 ):
     """
-    >>> pass
-"""
+    Connect mesh vertices with a skeleton of 1-vertex-thick curves by erosion.
+
+    This algorithm iteratively removes simple topological points and endpoints,
+    optionally in order of lowest to highest values.
+
+    Parameters
+    ----------
+    S : numpy array of integers
+        values for all vertices (disregard background values)
+    outer_anchors : list of integers
+        indices of vertices to connect
+    inner_anchors : list of integers
+        more vertices to connect; they are removed if they result in endpoints
+    neighbor_lists : list of lists of integers
+        each list contains indices to neighboring vertices for each vertex
+    values : numpy array of floats
+        values for S elements, to optionally remove points
+        in order of lowest to highest values
+    erode_ratio : float
+        fraction of indices to test for removal at each iteration (if values)
+    erode_min_size : integer
+        minimum number of vertices when considering erode_ratio
+    save_steps : list of integers (optional)
+        iterations at which to save incremental VTK file
+    save_vtk : string
+        name of VTK file to transfer incremental values (if save_steps)
+    background_value : integer or float
+        background value
+    verbose : bool
+        print statements?
+
+    Returns
+    -------
+    skeleton : list of integers
+        indices to vertices of skeleton
+
+    Examples
+    --------
+    >>> # Extract a skeleton to connect endpoints in a fold:
+    >>> import numpy as np
+    >>> from mindboggle.guts.paths import connect_points_erosion
+    >>> from mindboggle.guts.paths import find_outer_endpoints
+    >>> from mindboggle.mio.vtks import read_scalars, read_vtk
+    >>> from mindboggle.guts.compute import median_abs_dev
+    >>> from mindboggle.guts.paths import find_max_values
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> curv_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> points, f1,f2,f3, curvs, f4,f5,f6 = read_vtk(curv_file, True,True)
+    >>> depths, name = read_scalars(depth_file, True, True)
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> values = depths * curvs
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in values[0:5]]
+    [-0.11778, -0.35642, -0.80759, -0.25654, -0.04411]
+    >>> neighbor_lists = find_neighbors_from_file(curv_file)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [4] #[4, 6]
+    ...     indices = [i for i,x in enumerate(folds) if x in fold_numbers]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = background_value
+    ... else:
+    ...     indices = range(len(values))
+    >>> # Outer anchors:
+    >>> min_separation = 10
+    >>> verbose = False
+    >>> outer_anchors, tracks = find_outer_endpoints(indices, neighbor_lists,
+    ...                             values, depths, min_separation,
+    ...                             background_value, verbose)
+    >>> outer_anchors[0:10]
+    [50324, 66986, 75661]
+    >>> # Inner anchors:
+    >>> values0 = [x for x in values if x > 0]
+    >>> thr = np.median(values0) + 2 * median_abs_dev(values0)
+    >>> inner_anchors = find_max_values(points, values, min_separation, thr)
+    >>> inner_anchors[0:10]
+    [61455, 41761, 67978, 72621, 78546, 40675, 73745, 98736, 125536, 119813]
+    >>> erode_ratio = 0.10
+    >>> erode_min_size = 10
+    >>> save_steps = [] #list(range(0,500,50))
+    >>> save_vtk = depth_file
+    >>> S = np.copy(folds)
+    >>> skeleton = connect_points_erosion(S, neighbor_lists,
+    ...     outer_anchors, inner_anchors, values, erode_ratio, erode_min_size,
+    ...     save_steps, save_vtk, background_value, verbose)
+    >>> skeleton[0:10]
+    [50324, 50333, 50339, 51552, 51560, 52707, 52716, 52724, 52725, 53893]
+
+    Write out vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> folds[skeleton] = 10 # doctest: +SKIP
+    >>> folds[outer_anchors] = 15 # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'connect_points_erosion.vtk',
+    ...                 folds, 'skeleton', folds, background_value) # doctest: +SKIP
+    >>> plot_surfaces('connect_points_erosion.vtk') # doctest: +SKIP
+
+    """
     import numpy as np
 
     from mindboggle.guts.mesh import extract_edge, find_endpoints, topo_test
@@ -190,8 +292,110 @@ def connect_points_hmmf(
     verbose=False,
 ):
     """
-    >>> pass
-"""
+    Connect mesh vertices with a skeleton of 1-vertex-thick curves using HMMF.
+
+    The goal of this algorithm is to assign each vertex a locally optimal
+    Hidden Markov Measure Field (HMMF) value and to connect vertices according
+    to a cost function that penalizes vertices that do not have high likelihood
+    values and have HMMF values different than their neighbors.
+
+    We initialize the HMMF values with likelihood values normalized to the
+    interval (0.5, 1.0] (to guarantee correct topology) and take those values
+    that are greater than the likelihood threshold (1 for each anchor point).
+
+    We iteratively update each HMMF value if it is near the likelihood
+    threshold such that a H_step makes it cross the threshold,
+    and the vertex is a "simple point" (its addition/removal alters topology).
+
+    Parameters for computing the cost and cost gradients:
+
+        ``wL``: weight influence of likelihood on the cost function
+        ``wN``: weight influence of neighbors on the cost function
+        ``H_step``: the amount that the HMMF values are incremented
+
+    Parameters
+    ----------
+    indices_points : list of integers
+        indices of vertices to connect (should contain > 1)
+    indices : list of integers
+        indices of vertices through which to connect points
+    L : numpy array of floats
+        likelihood values for all vertices in mesh
+    neighbor_lists : list of lists of integers
+        indices to neighboring vertices for each vertex in mesh
+    wN_max : float
+        maximum neighborhood weight (trust prior more for smoother fundi)
+    do_erode : bool
+        erode to create skeleton?
+    background_value : integer
+        background value
+    verbose : bool
+        print statements?
+
+    Returns
+    -------
+    skeleton : list of integers
+        indices to vertices connecting the points
+
+    Examples
+    --------
+    >>> # Connect vertices according to (usually likelihood) values in a fold:
+    >>> import numpy as np
+    >>> from mindboggle.guts.paths import connect_points_hmmf
+    >>> from mindboggle.guts.paths import find_outer_endpoints
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.guts.compute import median_abs_dev
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> url1 = urls['left_mean_curvature']
+    >>> url2 = urls['left_travel_depth']
+    >>> url3 = urls['left_folds']
+    >>> curv_file = fetch_data(url1, '', '.vtk')
+    >>> depth_file = fetch_data(url2, '', '.vtk')
+    >>> folds_file = fetch_data(url3, '', '.vtk')
+    >>> curvs, name = read_scalars(curv_file, True, True)
+    >>> depths, name = read_scalars(depth_file, True, True)
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> L = curvs * depths
+    >>> print(np.array_str(L[0:5], precision=5, suppress_small=True))
+    [-0.11778 -0.35642 -0.80759 -0.25654 -0.04411]
+    >>> neighbor_lists = find_neighbors_from_file(curv_file)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [4] #[4, 6]
+    ...     indices = [i for i,x in enumerate(folds) if x in fold_numbers]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = background_value
+    ... else:
+    ...     indices = range(len(L))
+    >>> # Outer anchors:
+    >>> min_separation = 10
+    >>> verbose = False
+    >>> indices_points, tracks = find_outer_endpoints(indices, neighbor_lists,
+    ...                             L, depths, min_separation,
+    ...                             background_value, verbose)
+    >>> wN_max = 2.0
+    >>> do_erode = True
+    >>> skeleton = connect_points_hmmf(indices_points, indices, L,
+    ...     neighbor_lists, wN_max, do_erode, background_value, verbose)
+    >>> skeleton[0:10]
+    [50324, 50333, 50339, 51552, 51560, 51561, 52708, 52716, 53891, 53892]
+
+    Write out vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> folds_copy = np.copy(folds) # doctest: +SKIP
+    >>> folds[skeleton] = 100 # doctest: +SKIP
+    >>> folds[indices_points] = 120 # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'connect_points_hmmf.vtk',
+    ...                 folds, 'skeleton', folds, -1) # doctest: +SKIP
+    >>> plot_surfaces('connect_points_hmmf.vtk') # doctest: +SKIP
+
+    """
     import numpy as np
 
     from mindboggle.guts.mesh import topo_test
@@ -463,8 +667,101 @@ def smooth_skeletons(
     verbose=False,
 ):
     """
-    >>> pass
-"""
+    Smooth skeleton by dilation followed by connect_points_hmmf().
+
+    Steps ::
+        1. Segment skeleton into separate sets of connected vertices.
+        2. For each skeleton segment, extract endpoints.
+        3. Dilate skeleton segment.
+        4. Connect endpoints through dilated segment by connect_points_hmmf().
+        5. Store smoothed output from #4.
+
+    Parameters
+    ----------
+    skeletons : list of integers
+        skeleton number for each vertex
+    bounds : list of integers
+        region number for each vertex; constrains smoothed skeletons
+    vtk_file : string
+        file from which to extract neighboring vertices for each vertex
+    likelihoods : list of integers
+        fundus likelihood value for each vertex
+    wN_max : float
+        maximum neighborhood weight (trust prior more for smoother skeletons)
+    do_erode : bool
+        erode skeleton?
+    save_file : bool
+        save output VTK file?
+    output_file : string
+        output VTK file
+    background_value : integer or float
+        background value
+    verbose : bool
+        print statements?
+
+    Returns
+    -------
+    skeletons : list of integers
+        skeleton numbers for all vertices
+    n_skeletons :  integer
+        number of skeletons
+    skeletons_file : string (if save_file)
+        name of output VTK file with skeleton numbers
+
+    Examples
+    --------
+    >>> # Smooth skeleton to extract fundus from one or more folds:
+    >>> import numpy as np
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> from mindboggle.guts.paths import smooth_skeletons
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.guts.compute import median_abs_dev
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> curv_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> fundus_file = fetch_data(urls['left_fundus_per_fold'], '', '.vtk')
+    >>> curvs, name = read_scalars(curv_file, True, True)
+    >>> depths, name = read_scalars(depth_file, True, True)
+    >>> vtk_file = curv_file
+    >>> likelihoods = depths * curvs
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in likelihoods[0:5]]
+    [-0.11778, -0.35642, -0.80759, -0.25654, -0.04411]
+    >>> bounds, name = read_scalars(folds_file, True, True)
+    >>> skeletons, name = read_scalars(fundus_file, True, True)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [7] #[4, 6]
+    ...     i0 = [i for i,x in enumerate(bounds) if x not in fold_numbers]
+    ...     bounds[i0] = background_value
+    ...     skeletons[i0] = background_value
+    >>> wN_max = 1.0
+    >>> do_erode = True
+    >>> save_file = True
+    >>> output_file = 'smooth_skeletons.vtk'
+    >>> verbose = False
+    >>> smoothed_skeletons, n_skeletons, skel_file = smooth_skeletons(skeletons,
+    ...     bounds, vtk_file, likelihoods, wN_max, do_erode, save_file,
+    ...     output_file, background_value, verbose)
+    >>> np.where(np.array(smoothed_skeletons)!=-1)[0][0:8]
+    array([112572, 113435, 113454, 113469, 114294, 114295, 114296, 114312])
+
+    Write out vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> iskels = [i for i,x in enumerate(smoothed_skeletons)
+    ...           if x != background_value] # doctest: +SKIP
+    >>> bounds[iskels] = 100 # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'smooth_skeletons_no_background.vtk',
+    ...                 bounds, 'skeleton', bounds, -1) # doctest: +SKIP
+    >>> plot_surfaces('smooth_skeletons.vtk') # doctest: +SKIP
+
+    """
 
     import os
     from time import time
@@ -601,8 +898,87 @@ def smooth_skeletons(
 
 def track_segments(seed, segments, neighbor_lists, values, sink, background_value=-1):
     """
-    >>> pass
-"""
+    Build a track from a seed vertex through concentric segments of a mesh.
+
+    This function builds a track from an initial seed vertex through
+    concentric segments along high-value vertices of a surface mesh
+    optionally terminating at any of a set of sink vertices.
+
+    Parameters
+    ----------
+    seed : integer
+        index to initial seed vertex from which to grow a track
+    segments : list of lists of integers
+        indices to vertices for each concentric segment
+    neighbor_lists : list of lists of integers
+        indices to neighboring vertices for each vertex
+    values : numpy array of floats
+        values for all vertices that help to guide a track
+    sink : list of integers
+        indices for vertices that end a track
+    background_value : integer
+        background value
+
+    Returns
+    -------
+    track : list of integers
+        indices of ordered vertices for a single track
+
+    Examples
+    --------
+    >>> # Track from deepest point in a fold to its boundary:
+    >>> import numpy as np
+    >>> from mindboggle.guts.paths import track_segments
+    >>> from mindboggle.guts.segment import extract_borders
+    >>> from mindboggle.guts.segment import segment_rings
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> values_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [4] #[4, 6]
+    ...     indices = [i for i,x in enumerate(folds) if x in fold_numbers]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = background_value
+    ... else:
+    ...     indices = range(len(folds))
+    >>> neighbor_lists = find_neighbors_from_file(values_file)
+    >>> values, name = read_scalars(values_file, True, True)
+    >>> seeds = [x for x in indices if values[x] > np.median(values[indices])]
+    >>> segments = segment_rings(indices, seeds, neighbor_lists, 1, background_value)
+    >>> #seed = indices[np.argmax(values[indices])]
+    >>> seed = segments[0][np.argmax(values[segments[0]])]
+    >>> seed
+    55181
+    >>> # Extract boundary:
+    >>> D = np.ones(len(values))
+    >>> D[indices] = 2
+    >>> borders, f1,f2 = extract_borders(list(range(len(values))), D, neighbor_lists)
+    >>> sink = borders
+    >>> sink[0:10]
+    [49083, 49084, 50316, 50317, 50318, 50319, 50324, 50325, 50326, 50327]
+    >>> track = track_segments(seed, segments, neighbor_lists, values, sink,
+    ...                        background_value)
+    >>> track[0:10]
+    [55181, 53892, 52725, 52717, 52708, 51561, 51553, 50340, 50333, 50324]
+
+    View track in fold on surface (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> folds[track] = 10 # doctest: +SKIP
+    >>> folds[seed] = 15 # doctest: +SKIP
+    >>> rewrite_scalars(values_file, 'track_segments.vtk', folds,
+    ...                 'track', folds) # doctest: +SKIP
+    >>> plot_surfaces('track_segments.vtk') # doctest: +SKIP
+
+    """
     import numpy as np
 
     if not sink:
@@ -666,8 +1042,88 @@ def find_outer_endpoints(
     verbose=False,
 ):
     """
-    >>> pass
-"""
+    Find vertices on the boundary of a surface mesh region that are the
+    endpoints to multiple, high-value tracks from the region's center.
+
+    This algorithm propagates multiple tracks from seed vertices
+    at a given depth within a region of a surface mesh to the boundary
+    of the region (via the track_segments() function).
+    The tracks terminate at boundary vertices that can serve as endpoints
+    of fundus curves running along the depths of a fold.
+
+    Parameters
+    ----------
+    indices : list of integers
+        indices of the vertices to segment (such as a fold in a surface mesh)
+    neighbor_lists : list of lists of integers
+        indices to neighboring vertices for each vertex
+    values : numpy array of floats
+        values for all vertices (e.g., fundus likelihood values)
+    values_seeding : numpy array of floats
+        values for all vertices to threshold for initial seeds
+    min_separation : integer
+        minimum number of edges between anchor vertices
+    background_value : integer or float
+        background value
+    verbose : bool
+        print statements?
+
+    Returns
+    -------
+    endpoints : list of integers
+        indices of surface mesh vertices that are endpoints
+    endtracks : list of lists of integers
+        indices to track vertices
+
+    Examples
+    --------
+    >>> # Extract a skeleton to connect endpoints in a fold:
+    >>> import numpy as np
+    >>> from mindboggle.guts.paths import find_outer_endpoints
+    >>> from mindboggle.mio.vtks import read_scalars, read_vtk
+    >>> from mindboggle.guts.compute import median_abs_dev
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> curv_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> curvs, name = read_scalars(curv_file, True, True)
+    >>> depths, name = read_scalars(depth_file, True, True)
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> values = curvs * depths
+    >>> print(np.array_str(values[0:5], precision=5, suppress_small=True))
+    [-0.11778 -0.35642 -0.80759 -0.25654 -0.04411]
+    >>> neighbor_lists = find_neighbors_from_file(curv_file)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [4] #[4, 6]
+    ...     indices = [i for i,x in enumerate(folds) if x in fold_numbers]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = background_value
+    ... else:
+    ...     indices = range(len(folds))
+    >>> # Outer anchors:
+    >>> min_separation = 10
+    >>> verbose = False
+    >>> outer_anchors, tracks = find_outer_endpoints(indices, neighbor_lists,
+    ...                             values, depths, min_separation,
+    ...                             background_value, verbose)
+    >>> outer_anchors[0:10]
+    [50324, 66986, 75661]
+
+    View anchors in fold on surface (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> folds[outer_anchors] = 100 # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'find_outer_endpoints.vtk',
+    ...                 folds, 'tracks_endpoints_on_folds', folds) # doctest: +SKIP
+    >>> plot_surfaces('find_outer_endpoints.vtk') # doctest: +SKIP
+
+    """
     import numpy as np
 
     from mindboggle.guts.mesh import find_neighborhood
@@ -816,8 +1272,68 @@ def find_outer_endpoints(
 
 def find_max_values(points, values, min_separation=10, thr=0.5):
     """
-    >>> pass
-"""
+    Find points with maximal values that are not too close together.
+
+    Steps ::
+
+        1. Sort values and find values above the threshold.
+
+        2. Initialize special points with the maximum value,
+           remove this value, and loop through the remaining high values.
+
+        3. If there are no nearby special points,
+           assign the maximum value vertex as a special point.
+
+    Parameters
+    ----------
+    points : numpy array of floats
+        coordinates for all vertices
+    values : list (or array) of integers
+        values of some kind to maximize over for all vertices
+    min_separation : integer
+        minimum number of edges between maximum value vertices
+    thr : float
+        value threshold in [0,1]
+
+    Returns
+    -------
+    highest : list of integers
+        subset of surface mesh vertex indices with the highest values
+
+    Examples
+    --------
+    >>> # Extract a skeleton to connect endpoints in a fold:
+    >>> import numpy as np
+    >>> from mindboggle.guts.paths import find_max_values
+    >>> from mindboggle.mio.vtks import read_scalars, read_vtk
+    >>> from mindboggle.guts.compute import median_abs_dev
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> curv_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> points, f1,f2,f3, curvs, f4,f5,f6 = read_vtk(curv_file, True,True)
+    >>> depths, name = read_scalars(depth_file, True, True)
+    >>> values = depths * curvs
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in values[0:5]]
+    [-0.11778, -0.35642, -0.80759, -0.25654, -0.04411]
+    >>> min_separation = 10
+    >>> values0 = [x for x in values if x > 0]
+    >>> thr = np.median(values0) + 2 * median_abs_dev(values0)
+    >>> inner_anchors = find_max_values(points, values, min_separation, thr)
+    >>> inner_anchors[0:10]
+    [61455, 41761, 67978, 72621, 78546, 40675, 73745, 98736, 125536, 119813]
+
+    View anchors in surface fold (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> values[inner_anchors] = np.max(values) + 10 # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'find_max_values.vtk',
+    ...                 values, 'find_max_values', [], -1) # doctest: +SKIP
+    >>> plot_surfaces('find_max_values.vtk') # doctest: +SKIP
+
+    """
     from operator import itemgetter
 
     import numpy as np

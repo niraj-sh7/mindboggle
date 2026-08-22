@@ -13,8 +13,43 @@ Copyright 2016,  Mindboggle team (http://mindboggle.info), Apache v2.0 License
 
 def find_neighbors_from_file(input_vtk):
     """
-    >>> pass
-"""
+    Generate the list of unique, sorted indices of neighboring vertices
+    for all vertices in the faces of a triangular mesh in a VTK file.
+
+    Parameters
+    ----------
+    input_vtk : string
+        name of input VTK file containing surface mesh
+
+    Returns
+    -------
+    neighbor_lists : list of lists of integers
+        each list contains indices to neighboring vertices for each vertex
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> neighbor_lists = find_neighbors_from_file(vtk_file)
+    >>> neighbor_lists[0:3]
+    [[1, 4, 48, 49], [0, 4, 5, 49, 2], [1, 5, 6, 49, 50, 54]]
+
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> index = 100 # doctest: +SKIP
+    >>> IDs = -1 * np.ones(len(neighbor_lists)) # doctest: +SKIP
+    >>> IDs[index] = 1 # doctest: +SKIP
+    >>> IDs[neighbor_lists[index]] = 2 # doctest: +SKIP
+    >>> rewrite_scalars(vtk_file, 'find_neighbors_from_file.vtk', IDs,
+    ...                 'neighbors', IDs) # doctest: +SKIP
+    >>> plot_surfaces('find_neighbors_from_file.vtk') # doctest: +SKIP
+
+    """
     from mindboggle.guts.mesh import find_neighbors
     from mindboggle.mio.vtks import read_faces_points
 
@@ -27,8 +62,56 @@ def find_neighbors_from_file(input_vtk):
 
 def find_neighbors(faces, npoints):
     """
-    >>> pass
-"""
+    Generate the list of unique, sorted indices of neighboring vertices
+    for all vertices in the faces of a triangular mesh.
+
+    Parameters
+    ----------
+    faces : list of lists of three integers
+        the integers for each face are indices to vertices, starting from zero
+    npoints: integer
+        number of vertices on the mesh
+
+    Returns
+    -------
+    neighbor_lists : list of lists of integers
+        each list contains indices to neighboring vertices for each vertex
+
+    Examples
+    --------
+    >>> # Simple example:
+    >>> from mindboggle.guts.mesh import find_neighbors
+    >>> faces = [[0,1,2],[0,2,3],[0,3,4],[0,1,4],[4,3,1]]
+    >>> npoints = 5
+    >>> neighbor_lists = find_neighbors(faces, npoints)
+    >>> neighbor_lists
+    [[1, 2, 3, 4], [0, 2, 4, 3], [0, 1, 3], [0, 2, 4, 1], [0, 3, 1]]
+
+    Real example:
+
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import find_neighbors
+    >>> from mindboggle.mio.vtks import read_faces_points
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> faces, points, npoints = read_faces_points(vtk_file)
+    >>> neighbor_lists = find_neighbors(faces, npoints)
+    >>> neighbor_lists[0:3]
+    [[1, 4, 48, 49], [0, 4, 5, 49, 2], [1, 5, 6, 49, 50, 54]]
+
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> index = 100 # doctest: +SKIP
+    >>> IDs = -1 * np.ones(len(neighbor_lists)) # doctest: +SKIP
+    >>> IDs[index] = 1 # doctest: +SKIP
+    >>> IDs[neighbor_lists[index]] = 2 # doctest: +SKIP
+    >>> rewrite_scalars(vtk_file, 'find_neighbors.vtk', IDs, 'neighbors', IDs) # doctest: +SKIP
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> plot_surfaces('find_neighbors.vtk') # doctest: +SKIP
+
+    """
 
     neighbor_lists = [[] for x in range(npoints)]
 
@@ -158,8 +241,56 @@ def find_neighborhood(neighbor_lists, indices, nedges=1):
 
 def find_endpoints(indices, neighbor_lists):
     """
-    >>> pass
-"""
+    Extract endpoints from connected set of vertices.
+
+    Parameters
+    ----------
+    indices : list of integers
+        indices to connected vertices
+    neighbor_lists : list of lists of integers
+        each list contains indices to neighboring vertices for each vertex
+
+    Returns
+    -------
+    indices_endpoints : list of integers
+        indices to endpoints of connected vertices
+
+    Examples
+    --------
+    >>> # Find endpoints of fundus in a fold:
+    >>> from mindboggle.guts.mesh import find_endpoints
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> urls, fetch_data = prep_tests()
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> fundus_file = fetch_data(urls['left_fundus_per_fold'], '', '.vtk')
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> fundi, name = read_scalars(fundus_file, True, True)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [2]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = background_value
+    ...     fundi[i0] = background_value
+    ...     indices = [i for i,x in enumerate(fundi) if x != background_value]
+    >>> neighbor_lists = find_neighbors_from_file(fundus_file)
+    >>> indices_endpoints = find_endpoints(indices, neighbor_lists)
+    >>> indices_endpoints[0:5]
+    [32782, 35142, 45244, 49010, 63051]
+
+    View endpoints (skip test):
+
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> fundi[indices_endpoints] = 50 # doctest: +SKIP
+    >>> rewrite_scalars(fundus_file, 'find_endpoints.vtk', fundi,
+    ...     'endpoints', folds, background_value) # doctest: +SKIP
+    >>> plot_surfaces('find_endpoints.vtk') # doctest: +SKIP
+
+    """
 
     # Find vertices with only one neighbor in a set of given indices:
     I = set(indices)
@@ -464,8 +595,70 @@ def keep_faces(faces, indices):
 
 def reindex_faces_points(faces, points=[]):
     """
-    >>> pass
-"""
+    Renumber indices in faces and remove points (coordinates) not in faces.
+
+    Parameters
+    ----------
+    faces : list of lists of integers
+        each sublist contains 3 indices of vertices that form a face
+        on a surface mesh
+    points : list of lists of floats (optional)
+        each sublist contains 3-D coordinates of a vertex on a surface mesh
+
+    Returns
+    -------
+    new_faces : list of lists of integers
+        each sublist contains 3 (renumbered) indices of vertices
+        that form a face on a surface mesh
+    new_points : list of lists of floats
+        each (new) sublist contains 3-D coordinates of a vertex on a surface mesh
+    original_indices : list integers
+        list of indices to original points
+
+    Examples
+    --------
+    >>> from mindboggle.guts.mesh import reindex_faces_points
+    >>> # Reindex faces:
+    >>> faces = [[8,2,3], [2,3,7], [4,7,8], [3,2,5]]
+    >>> new_faces, new_points, original_indices = reindex_faces_points(faces,
+    ...     points=[])
+    >>> new_faces
+    [[5, 0, 1], [0, 1, 4], [2, 4, 5], [1, 0, 3]]
+
+    Reindex faces of a limited number of folds of the brain:
+
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import keep_faces
+    >>> from mindboggle.mio.vtks import read_faces_points
+    >>> from mindboggle.mio.vtks import read_scalars, rewrite_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> fold_numbers = [4]
+    >>> indices = [i for i,x in enumerate(folds) if x in fold_numbers]
+    >>> i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    >>> background_value = -1
+    >>> folds[i0] = background_value
+    >>> faces, points, npoints = read_faces_points(folds_file)
+    >>> faces = keep_faces(faces, indices)
+    >>> faces[0:3]
+    [[51535, 50324, 51529], [50317, 50325, 50326], [50324, 50332, 50333]]
+    >>> new_faces, new_points, original_indices = reindex_faces_points(faces,
+    ...     points)
+    >>> new_faces[0:3]
+    [[277, 690, 276], [689, 691, 692], [690, 698, 699]]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in points[0]]
+    [-13.7924, -76.0973, -2.57594]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in new_points[0]]
+    [-13.7802, -12.3814, 57.4042]
+
+    View reindexed fold on surface (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> plot_surfaces('reindex_faces_points.vtk') # doctest: +SKIP
+
+    """
     import itertools
 
     import numpy as np
@@ -568,8 +761,63 @@ def decimate(
     output_vtk="",
 ):
     """
-    >>> pass
-"""
+    Decimate vtk triangular mesh with vtk.vtkDecimatePro.
+
+    Parameters
+    ----------
+    points : list of lists of floats
+        each element is a list of 3-D coordinates of a vertex on a surface mesh
+    faces : list of lists of integers
+        each element is list of 3 indices of vertices that form a face
+        on a surface mesh
+    reduction : float
+        fraction of mesh faces to remove
+    smooth_steps : integer
+        number of smoothing steps
+    scalars : list of integers or floats
+        optional scalars for output VTK file
+    save_vtk : bool
+        output decimated vtk file?
+    output_vtk : string
+        output decimated vtk file name
+
+    Returns
+    -------
+    points : list of lists of floats
+        decimated points
+    faces : list of lists of integers
+        decimated faces
+    scalars : list of integers or floats
+        scalars for output VTK file
+    output_vtk : string
+        output decimated vtk file
+
+    Examples
+    --------
+    >>> # Example: Twins-2-1 left postcentral pial surface, 0.75 decimation:
+    >>> from mindboggle.guts.mesh import decimate
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_vtk = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> points, f1, f2, faces, scalars, f3, f4, f5 = read_vtk(input_vtk)
+    >>> reduction = 0.5
+    >>> smooth_steps = 25
+    >>> save_vtk = True
+    >>> output_vtk = 'decimate.vtk'
+    >>> points2, faces2, scalars, output_vtk = decimate(points, faces,
+    ...     reduction, smooth_steps, scalars, save_vtk, output_vtk)
+    >>> (len(points), len(points2))
+    (145069, 72535)
+    >>> (len(faces), len(faces2))
+    (290134, 145066)
+
+    View decimated surface (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> plot_surfaces('decimate.vtk') # doctest: +SKIP
+
+    """
     import os
 
     import vtk
@@ -697,8 +945,52 @@ def decimate_file(
     input_vtk, reduction=0.5, smooth_steps=100, save_vtk=True, output_vtk=""
 ):
     """
-    >>> pass
-"""
+    Decimate vtk triangular mesh file with vtk.vtkDecimatePro.
+
+    Parameters
+    ----------
+    input_vtk : string
+        input vtk file with triangular surface mesh
+    reduction : float
+        fraction of mesh faces to remove
+    do_smooth : bool
+        smooth after decimation?
+    save_vtk : bool
+        output decimated vtk file?
+    output_vtk : string
+        output decimated vtk file name
+
+    Returns
+    -------
+    output_vtk : string
+        output decimated vtk file
+
+    Examples
+    --------
+    >>> from mindboggle.guts.mesh import decimate_file
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_vtk = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> save_vtk = True
+    >>> output_vtk = 'decimate.vtk'
+    >>> reduction = 0.5
+    >>> smooth_steps = 25
+    >>> output_vtk = decimate_file(input_vtk, reduction, smooth_steps,
+    ...     save_vtk, output_vtk)
+    >>> f1, f2, f3, faces1, f4, f5, npoints1, f6 = read_vtk(input_vtk)
+    >>> f1, f2, f3, faces2, f4, f5, npoints2, f6 = read_vtk('decimate.vtk')
+    >>> (npoints1, npoints2)
+    (145069, 72535)
+    >>> (len(faces1), len(faces2))
+    (290134, 145066)
+
+    View decimated surface (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> plot_surfaces('decimate.vtk') # doctest: +SKIP
+
+    """
     from mindboggle.guts.mesh import decimate
     from mindboggle.mio.vtks import read_vtk
 
@@ -728,8 +1020,66 @@ def rescale_by_neighborhood(
     background_value=-1,
 ):
     """
-    >>> pass
-"""
+    Rescale the scalar values of a VTK file by a percentile value
+    in each vertex's surface mesh neighborhood.
+
+    Parameters
+    ----------
+    input_vtk : string
+        name of VTK file with a scalar value for each vertex
+    indices : list of integers (optional)
+        indices of scalars to normalize
+    nedges : integer
+        number or edges from vertex, defining the size of its neighborhood
+    p : float in range of [0,100]
+        percentile used to normalize each scalar
+    set_max_to_1 : bool
+        set all rescaled values greater than 1 to 1.0?
+    save_file : bool
+        save output VTK file?
+    output_filestring : string (if save_file)
+        name of output file
+    background_value : integer
+        background value
+
+    Returns
+    -------
+    rescaled_scalars : list of floats
+        rescaled scalar values
+    rescaled_scalars_file : string (if save_file)
+        name of output VTK file with rescaled scalar values
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import rescale_by_neighborhood
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_vtk = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> indices = []
+    >>> nedges = 10
+    >>> p = 99
+    >>> set_max_to_1 = True
+    >>> save_file = True
+    >>> output_filestring = 'rescale_by_neighborhood'
+    >>> background_value = -1
+    >>> rescaled, rescaled_file = rescale_by_neighborhood(input_vtk,
+    ...     indices, nedges, p, set_max_to_1, save_file, output_filestring,
+    ...     background_value)
+    >>> scalars1, name = read_scalars(input_vtk)
+    >>> print('{0:0.5f}, {1:0.5f}'.format(max(scalars1), max(rescaled)))
+    34.95560, 1.00000
+    >>> print('{0:0.5f}, {1:0.5f}'.format(np.mean(scalars1), np.mean(rescaled)))
+    7.43822, 0.44950
+
+    View rescaled scalar values on surface (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> plot_surfaces(rescaled_file) # doctest: +SKIP
+
+    """
     import os
 
     import numpy as np
@@ -792,8 +1142,62 @@ def rescale_by_label(
     verbose=False,
 ):
     """
-    >>> pass
-"""
+    Rescale scalars for each label (such as depth values within each fold).
+
+    Default is to normalize the scalar values of a VTK file by
+    a percentile value in each vertex's surface mesh for each label.
+
+    Parameters
+    ----------
+    input_vtk : string
+        name of VTK file with a scalar value for each vertex
+    labels_or_file : list or string
+        label number for each vertex or name of VTK file with index scalars
+    save_file : bool
+        save output VTK file?
+    output_filestring : string (if save_file)
+        name of output file
+    background_value : integer or float
+        background value
+    verbose : bool
+        print statements?
+
+    Returns
+    -------
+    rescaled_scalars : list of floats
+        scalar values rescaled for each label, for label numbers not equal to -1
+    rescaled_scalars_file : string (if save_file)
+        name of output VTK file with rescaled scalar values for each label
+
+    Examples
+    --------
+    >>> # Rescale depths by neighborhood within each label:
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import rescale_by_label
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_vtk = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> labels_or_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> save_file = True
+    >>> output_filestring = 'rescale_by_label'
+    >>> background_value = -1
+    >>> verbose = False
+    >>> rescaled, rescaled_label_file = rescale_by_label(input_vtk,
+    ...     labels_or_file, save_file, output_filestring, background_value, verbose)
+    >>> scalars1, name = read_scalars(input_vtk)
+    >>> print('{0:0.5f}, {1:0.5f}'.format(max(scalars1), max(rescaled)))
+    34.95560, 1.00000
+    >>> print('{0:0.5f}, {1:0.5f}'.format(np.mean(scalars1), np.mean(rescaled)))
+    7.43822, 0.30677
+
+    View rescaled scalar values on surface (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> plot_surfaces(rescaled_label_file) # doctest: +SKIP
+
+    """
     import os
 
     import numpy as np
@@ -850,8 +1254,34 @@ def rescale_by_label(
 
 def area_of_faces(points, faces):
     """
-    >>> pass
-"""
+    Compute the areas of all triangles on the mesh.
+
+    Parameters
+    ----------
+    points : list of lists of 3 floats
+        x,y,z coordinates for each vertex of the structure
+    faces : list of lists of 3 integers
+        3 indices to vertices that form a triangle on the mesh
+
+    Returns
+    -------
+    area: 1-D numpy array
+        area[i] is the area of the i-th triangle
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import area_of_faces
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_vtk = fetch_data(urls['left_area'], '', '.vtk')
+    >>> points, f1, f2, faces, f3, f4, f5, f6 = read_vtk(input_vtk)
+    >>> area = area_of_faces(points, faces)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in area[0:5]]
+    [0.21703, 0.27139, 0.29033, 0.1717, 0.36011]
+
+    """
     import numpy as np
 
     area = np.zeros(len(faces))
@@ -871,8 +1301,54 @@ def area_of_faces(points, faces):
 
 def dilate(indices, nedges, neighbor_lists):
     """
-    >>> pass
-"""
+    Dilate region on a surface mesh.
+
+    Parameters
+    ----------
+    indices : list of integers
+        indices of vertices to dilate
+    nedges : integer
+        number of edges to dilate across
+    neighbor_lists : list of lists of integers
+        each list contains indices to neighboring vertices for each vertex
+
+    Returns
+    -------
+    dilated_indices : list of integers
+        indices of original vertices with dilated vertices
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import dilate, find_neighbors_from_file
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> neighbor_lists = find_neighbors_from_file(vtk_file)
+    >>> nedges = 3
+    >>> # Select a single fold:
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> fold_number = 4
+    >>> indices = [i for i,x in enumerate(folds) if x == fold_number]
+    >>> dilated_indices = dilate(indices, nedges, neighbor_lists)
+    >>> (len(indices), len(dilated_indices))
+    (1151, 1545)
+    >>> dilated_indices[0:10]
+    [50317, 50324, 50325, 50326, 50327, 50332, 50333, 50334, 50339, 50340]
+
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars
+    >>> IDs = -1 * np.ones(len(folds)) # doctest: +SKIP
+    >>> IDs[dilated_indices] = 2 # doctest: +SKIP
+    >>> IDs[indices] = 1 # doctest: +SKIP
+    >>> rewrite_scalars(vtk_file, 'dilate.vtk', IDs, 'dilated_fold', IDs) # doctest: +SKIP
+    >>> plot_surfaces('dilate.vtk') # doctest: +SKIP
+
+    """
     from mindboggle.guts.mesh import find_neighborhood
 
     N = find_neighborhood(neighbor_lists, indices, nedges)
@@ -885,8 +1361,51 @@ def dilate(indices, nedges, neighbor_lists):
 
 def erode(indices, nedges, neighbor_lists):
     """
-    >>> pass
-"""
+    Erode region on a surface mesh.
+
+    Parameters
+    ----------
+    indices : list of integers
+        indices of vertices to erode
+    nedges : integer
+        number of edges to erode across
+    neighbor_lists : list of lists of integers
+        each list contains indices to neighboring vertices for each vertex
+
+    Returns
+    -------
+    eroded_indices : list of integers
+        indices of original vertices without eroded vertices
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import erode, find_neighbors_from_file
+    >>> from mindboggle.mio.vtks import read_scalars, rewrite_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> neighbor_lists = find_neighbors_from_file(vtk_file)
+    >>> nedges = 3
+    >>> # Select a single fold:
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> fold_number = 4
+    >>> indices = [i for i,x in enumerate(folds) if x == fold_number]
+    >>> eroded_indices = erode(indices, nedges, neighbor_lists)
+    >>> (len(indices), len(eroded_indices))
+    (1151, 809)
+
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> IDs = -1 * np.ones(len(folds)) # doctest: +SKIP
+    >>> IDs[indices] = 1 # doctest: +SKIP
+    >>> IDs[eroded_indices] = 2 # doctest: +SKIP
+    >>> rewrite_scalars(vtk_file, 'erode.vtk', IDs, 'eroded_fold', IDs) # doctest: +SKIP
+    >>> plot_surfaces('erode.vtk') # doctest: +SKIP
+
+    """
     from mindboggle.guts.mesh import find_neighborhood
 
     N1 = find_neighborhood(neighbor_lists, indices, nedges=1)
@@ -899,8 +1418,49 @@ def erode(indices, nedges, neighbor_lists):
 
 def extract_edge(indices, neighbor_lists):
     """
-    >>> pass
-"""
+    Erode region on a surface mesh to extract the region's edge.
+
+    Parameters
+    ----------
+    indices : list of integers
+        indices of vertices to erode
+    neighbor_lists : list of lists of integers
+        each list contains indices to neighboring vertices for each vertex
+
+    Returns
+    -------
+    edge_indices : list of integers
+        indices of eroded vertices
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import extract_edge
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.mio.vtks import read_scalars, rewrite_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> neighbor_lists = find_neighbors_from_file(vtk_file)
+    >>> # Select a single fold:
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> fold_number = 4
+    >>> indices = [i for i,x in enumerate(folds) if x == fold_number]
+    >>> edge_indices = extract_edge(indices, neighbor_lists)
+    >>> (len(indices), len(edge_indices))
+    (1151, 111)
+
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> IDs = -1 * np.ones(len(folds)) # doctest: +SKIP
+    >>> IDs[indices] = 1 # doctest: +SKIP
+    >>> IDs[edge_indices] = 2 # doctest: +SKIP
+    >>> rewrite_scalars(vtk_file, 'extract_edge.vtk', IDs, 'edges_of_fold', IDs) # doctest: +SKIP
+    >>> plot_surfaces('extract_edge.vtk') # doctest: +SKIP
+
+    """
     from mindboggle.guts.mesh import find_neighborhood
 
     N1 = find_neighborhood(neighbor_lists, indices, nedges=1)

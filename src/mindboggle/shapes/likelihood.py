@@ -88,7 +88,26 @@ def compute_likelihood(
 
     Examples
     --------
-    >>> pass
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.shapes.likelihood import compute_likelihood
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> curvature_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> trained_file = fetch_data(urls[
+    ...     'depth_curv_border_nonborder_parameters'], '', '.pkl') # doctest: +SKIP
+    >>> folds, name = read_scalars(folds_file)
+    >>> save_file = True
+    >>> background_value = -1
+    >>> likelihoods, likelihoods_file = compute_likelihood(trained_file,
+    ...     depth_file, curvature_file, folds, save_file, background_value) # doctest: +SKIP
+
+    View result (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> plot_surfaces('likelihoods.vtk', folds_file) # doctest: +SKIP
+
     """
     import os
     import pickle
@@ -219,7 +238,69 @@ def estimate_distribution(
 
     Examples
     --------
-    >>> pass
+    >>> import numpy as np
+    >>> import pickle
+    >>> from mindboggle.shapes.likelihood import estimate_distribution
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> # Train on a single surface mesh (using FreeSurfer vs. manual labels):
+    >>> urls, fetch_data = prep_tests()
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> curv_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> labels_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> depth_files = [depth_file]
+    >>> curv_files = [curv_file]
+    >>> fold_files = [folds_file]
+    >>> label_files = [labels_file]
+    >>> #
+    >>> # # Train on many Mindboggle-101 surface meshes:
+    >>> # import os
+    >>> # mindboggle_path = '../../Mindboggle101_mindboggle_results'
+    >>> # label_path = os.environ['SUBJECTS_DIR']
+    >>> # x_path = os.path.join(os.environ['MINDBOGGLE'], 'x')
+    >>> # atlas_list_file = os.path.join(x_path, 'mindboggle101_atlases.txt')
+    >>> # depth_files = []
+    >>> # curv_files = []
+    >>> # fold_files = []
+    >>> # label_files = []
+    >>> # for atlas in atlas_list:
+    >>> #  if 'OASIS' in atlas or 'NKI' in atlas or 'MMRR-21' in atlas:
+    >>> #   print(atlas)
+    >>> #   for h in ['lh','rh']:
+    >>> #     depth_file = os.path.join(mindboggle_path, 'shapes',
+    >>> #         '_hemi_'+h+'_subject_'+atlas, h+'.pial.travel_depth.vtk')
+    >>> #     curv_file = os.path.join(mindboggle_path, 'shapes',
+    >>> #         '_hemi_'+h+'_subject_'+atlas, h+'.pial.mean_curvature.vtk')
+    >>> #     folds_file = os.path.join(mindboggle_path, 'features',
+    >>> #         '_hemi_'+h+'_subject_'+atlas, 'folds.vtk')
+    >>> #     labels_file = os.path.join(label_path, atlas, 'label',
+    >>> #         h+'.labels.DKT25.manual.vtk')
+    >>> #     depth_files.append(depth_file)
+    >>> #     curv_files.append(curv_file)
+    >>> #     fold_files.append(folds_file)
+    >>> #     label_files.append(labels_file)
+    >>> #
+    >>> scalar_files = depth_files
+    >>> scalar_range = np.linspace(0, 1, 51, endpoint=True) # (0 to 1 by 0.02)
+    >>> background_value = -1
+    >>> verbose = False
+    >>> depth_border, depth_nonborder = estimate_distribution(scalar_files,
+    ...     scalar_range, fold_files, label_files, background_value, verbose)
+    >>> scalar_files = curv_files
+    >>> scalar_range = np.linspace(-1, 1, 101, endpoint=True) # (-1 to 1 by 0.02)
+    >>> curv_border, curv_nonborder = estimate_distribution(scalar_files,
+    ...     scalar_range, fold_files, label_files, verbose)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in depth_border['means']]
+    [13.0869, 0.0, 0.0]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in depth_nonborder['means']]
+    [14.59311, 6.16008, 0.0]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in curv_border['means']]
+    [3.06449, -0.76109, -3.43184]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in curv_nonborder['means']]
+    [0.62236, -1.55192, -5.19359]
+    >>> pickle.dump([depth_border, curv_border, depth_nonborder, curv_nonborder],
+    ...     open("depth_curv_border_nonborder_parameters.pkl", "wb"))
+
     """
     from mindboggle.shapes.likelihood import (
         concatenate_sulcus_scalars,
@@ -287,7 +368,25 @@ def concatenate_sulcus_scalars(
 
     Examples
     --------
-    >>> pass
+    >>> # Concatenate (duplicate) depth scalars:
+    >>> import numpy as np
+    >>> from mindboggle.shapes.likelihood import concatenate_sulcus_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> labels_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> scalar_files = [depth_file, depth_file]
+    >>> fold_files = [folds_file, folds_file]
+    >>> label_files = [labels_file, labels_file]
+    >>> background_value = -1
+    >>> border, nonborder = concatenate_sulcus_scalars(scalar_files,
+    ...     fold_files, label_files, background_value)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in border[0:5]]
+    [3.48284, 2.57157, 4.27596, 4.56549, 3.84881]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in nonborder[0:5]]
+    [2.87204, 2.89388, 3.55364, 2.81681, 3.70736]
+
     """
     import numpy as np
 
@@ -371,7 +470,23 @@ def fit_normals_to_histogram(data, x, verbose=False):
 
     Examples
     --------
-    >>> pass
+    >>> import numpy as np
+    >>> from mindboggle.shapes.likelihood import fit_normals_to_histogram
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> scalars, name = read_scalars(depth_file)
+    >>> x = np.linspace(0, 1, 51, endpoint=True)
+    >>> verbose = False
+    >>> means, sigmas, weights = fit_normals_to_histogram(scalars, x, verbose)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in means]
+    [13.38742, 3.90712, 0.10946]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in sigmas]
+    [5.80721, 2.58297, 0.10209]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in weights]
+    [0.43959, 0.39286, 0.16755]
+
     """
     from math import pi
 

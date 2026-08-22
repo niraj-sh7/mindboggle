@@ -87,7 +87,77 @@ def extract_sulci(
 
     Examples
     --------
-    >>> pass
+    >>> # Example 1: Extract sulcus from a fold with one sulcus label pair:
+    >>> import numpy as np
+    >>> from mindboggle.features.sulci import extract_sulci
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> # Load labels, folds, neighbor lists, and sulcus names and label pairs
+    >>> labels_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> folds_or_file, name = read_scalars(folds_file, True, True)
+    >>> save_file = True
+    >>> output_file = 'extract_sulci_fold4_1sulcus.vtk'
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [4] #[4, 6]
+    ...     i0 = [i for i,x in enumerate(folds_or_file) if x not in fold_numbers]
+    ...     folds_or_file[i0] = background_value
+    >>> hemi = 'lh'
+    >>> min_boundary = 10
+    >>> sulcus_names = []
+    >>> verbose = False
+    >>> sulci, n_sulci, sulci_file = extract_sulci(labels_file, folds_or_file,
+    ...     hemi, min_boundary, sulcus_names, save_file, output_file,
+    ...     background_value, verbose)
+    >>> n_sulci  # 23 # (if not limit_folds)
+    1
+    >>> lens = [len([x for x in sulci if x==y])
+    ...         for y in np.unique(sulci) if y != -1]
+    >>> lens[0:10]  # [6358, 3288, 7612, 5205, 4414, 6251, 3493, 2566, 4436, 739] # (if not limit_folds)
+    [1151]
+
+    View result without background (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> output = 'extract_sulci_fold4_1sulcus_no_background.vtk'
+    >>> rewrite_scalars(sulci_file, output, sulci,
+    ...                 'sulci', sulci) # doctest: +SKIP
+    >>> plot_surfaces(output) # doctest: +SKIP
+
+    Example 2:  Extract sulcus from a fold with multiple sulcus label pairs:
+
+    >>> folds_or_file, name = read_scalars(folds_file, True, True)
+    >>> output_file = 'extract_sulci_fold7_2sulci.vtk'
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [7] #[4, 6]
+    ...     i0 = [i for i,x in enumerate(folds_or_file) if x not in fold_numbers]
+    ...     folds_or_file[i0] = background_value
+    >>> sulci, n_sulci, sulci_file = extract_sulci(labels_file, folds_or_file,
+    ...     hemi, min_boundary, sulcus_names, save_file, output_file,
+    ...     background_value, verbose)
+    >>> n_sulci  # 23 # (if not limit_folds)
+    2
+    >>> lens = [len([x for x in sulci if x==y])
+    ...         for y in np.unique(sulci) if y != -1]
+    >>> lens[0:10]  # [6358, 3288, 7612, 5205, 4414, 6251, 3493, 2566, 4436, 739] # (if not limit_folds)
+    [369, 93]
+
+    View result without background (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> output = 'extract_sulci_fold7_2sulci_no_background.vtk'
+    >>> rewrite_scalars(sulci_file, output, sulci,
+    ...                 'sulci', sulci) # doctest: +SKIP
+    >>> plot_surfaces(output) # doctest: +SKIP
+
     """
     import os
     from time import time

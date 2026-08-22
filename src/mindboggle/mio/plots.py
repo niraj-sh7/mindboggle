@@ -31,7 +31,39 @@ def plot_surfaces(vtk_files, use_colormap=False, colormap_file=""):
 
     Examples
     --------
-    >>> pass
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> labels_file = fetch_data(urls['left_manual_labels'], '', '.vtk') #'left_freesurfer_labels'
+    >>> use_colormap = True
+    >>> colormap_file = '/software/vtk_cpp_tools/colormap.xml' # doctest: +SKIP
+    >>> plot_surfaces(labels_file, use_colormap, colormap_file) # doctest: +SKIP
+
+    Plot manual labels on folds of the left hemisphere:
+
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> from mindboggle.mio.vtks import rewrite_scalars
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> urls, fetch_data = prep_tests()
+    >>> labels_file = fetch_data(urls['left_manual_labels'], '', '.vtk') #'left_freesurfer_labels'
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> labels, name = read_scalars(labels_file, True, True)
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = False
+    >>> if limit_folds:
+    ...     fold_numbers = [4] #[4, 6]
+    ...     indices = [i for i,x in enumerate(folds) if x in fold_numbers]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = background_value
+    ... else:
+    ...     indices = [i for i,x in enumerate(folds) if x != background_value]
+    >>> folds[indices] = labels[indices]
+    >>> rewrite_scalars(labels_file, 'labeled_folds.vtk',
+    ...                 folds, 'skeleton', folds, background_value) # doctest: +SKIP
+    >>> plot_surfaces('labeled_folds.vtk') # doctest: +SKIP
 
     """
     import os
