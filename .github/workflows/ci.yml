@@ -15,7 +15,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      # Pinned to match the dev group in pyproject.toml.
       - run: uvx ruff@0.16.0 check .
+      # The repo-wide format is a single tracked commit (.git-blame-ignore-revs);
+      # this keeps it from drifting one PR at a time.
+      - run: uvx ruff@0.16.0 format --check .
+
+  doctests:
+    name: Doctest guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Cheap structural check: no stubbed docstrings, no drop in doctest count.
+      # Runs in seconds and does not need VTK, so it reports before the heavy job.
+      - run: python tools/check_doctests.py
 
   build:
     name: Build wheel
