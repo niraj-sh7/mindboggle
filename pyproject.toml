@@ -99,7 +99,7 @@ addopts = [
 
   # === Skip ledger: doctests that currently segfault, hang, or need a heavy
   #     binary we do not have in CI. Each one is a test we WANT back. Re-enable
-  #     and delete the line as they are fixed (#28). ===
+  #     and delete the line as they are fixed (#30). ===
 
   # -- Need the VTK C++ tools on PATH; segfault under xvfb in CI. --
   "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.area",
