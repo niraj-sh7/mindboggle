@@ -100,7 +100,46 @@ def extract_fundi(
 
     Examples
     --------
-    >>> pass
+    >>> # Extract fundus from one or more folds:
+    >>> import numpy as np
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.features.fundi import extract_fundi
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> curv_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [4] #[4, 6]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = -1
+    >>> min_separation = 10
+    >>> erode_ratio = 0.10
+    >>> erode_min_size = 10
+    >>> save_file = True
+    >>> output_file = 'extract_fundi_fold4.vtk'
+    >>> background_value = -1
+    >>> verbose = False
+    >>> o1, o2, fundus_per_fold_file = extract_fundi(folds, curv_file,
+    ...     depth_file, min_separation, erode_ratio, erode_min_size,
+    ...     save_file, output_file, background_value, verbose)
+    >>> lens = [len([x for x in o1 if x == y])
+    ...         for y in np.unique(o1) if y != background_value]
+    >>> lens[0:10] # [66, 2914, 100, 363, 73, 331, 59, 30, 1, 14] # (if not limit_folds)
+    [73]
+
+    View result without background (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> rewrite_scalars(fundus_per_fold_file,
+    ...                 'extract_fundi_fold4_no_background.vtk', o1,
+    ...                 'fundus_per_fold', folds) # doctest: +SKIP
+    >>> plot_surfaces('extract_fundi_fold4_no_background.vtk') # doctest: +SKIP
+
     """
 
     # Extract a skeleton to connect endpoints in a fold:

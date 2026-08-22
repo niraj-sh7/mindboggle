@@ -32,7 +32,24 @@ def area(command, surface_file, verbose=False):
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> import numpy as np
+    >>> from mindboggle.shapes.surface_shapes import area
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> surface_file = fetch_data(urls['left_pial'], '', '.vtk')
+    >>> verbose = False
+    >>> ccode_path = os.environ['vtk_cpp_tools']
+    >>> command = os.path.join(ccode_path, 'area', 'PointAreaMain')
+    >>> area_file = area(command, surface_file, verbose)
+    >>>
+    >>> scalars, name = read_scalars(area_file)
+    >>> np.allclose(scalars[0:8],
+    ...             [0.48270401731, 0.39661528543, 0.57813454792, 0.70574099571,
+    ...              0.84318527207, 0.57642554119, 0.66942016035, 0.70629953593])
+    True
+
     """
     import os
 
@@ -77,7 +94,21 @@ def travel_depth(command, surface_file, verbose=False):
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> import numpy as np
+    >>> from mindboggle.shapes.surface_shapes import travel_depth
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> surface_file = fetch_data(urls['left_pial'], '', '.vtk')
+    >>> verbose = False
+    >>> ccode_path = os.environ['vtk_cpp_tools']
+    >>> command = os.path.join(ccode_path, 'travel_depth', 'TravelDepthMain')
+    >>> depth_file = travel_depth(command, surface_file, verbose)
+    >>> scalars, name = read_scalars(depth_file)
+    >>> np.allclose(scalars[0:8], [0.020259869839, 0.06009166489, 0.12858575442, 0.045639221313, 0.007742772964, 0.052839111255, 0.053538904296, 0.013158746337])
+    True
+
     """
     import os
 
@@ -120,7 +151,20 @@ def geodesic_depth(command, surface_file, verbose=False):
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> import numpy as np
+    >>> from mindboggle.shapes.surface_shapes import geodesic_depth
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> surface_file = fetch_data(urls['left_pial'], '', '.vtk')
+    >>> verbose = False
+    >>> ccode_path = os.environ['vtk_cpp_tools']
+    >>> command = os.path.join(ccode_path, 'geodesic_depth', 'GeodesicDepthMain')
+    >>> depth_file = geodesic_depth(command, surface_file, verbose)
+    >>> scalars, name = read_scalars(depth_file)
+    >>> np.allclose(scalars[0:8], [0.020259869839, 0.06009166489, 0.12858575442, 0.045639221313, 0.007742772964, 0.052839111255, 0.053538904296, 0.013158746337])
+    True
 
     """
     import os
@@ -217,7 +261,24 @@ def curvature(command, method, arguments, surface_file, verbose=False):
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> import numpy as np
+    >>> from mindboggle.shapes.surface_shapes import curvature
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> surface_file = fetch_data(urls['left_pial'], '', '.vtk')
+    >>> method = 2
+    >>> arguments = '-n 0.7'
+    >>> verbose = False
+    >>> ccode_path = os.environ['vtk_cpp_tools']
+    >>> command = os.path.join(ccode_path, 'curvature', 'CurvatureMain')
+    >>> mean_curvature_file, f1,f2,f3,f4 = curvature(command, method,
+    ...     arguments, surface_file, verbose)
+    >>> scalars, name = read_scalars(mean_curvature_file)
+    >>> np.allclose(scalars[0:8], [-5.8136068088, -5.9312990469, -6.2805500474, -5.6210018286, -5.6963067208, -5.8039874097, -5.8726460688, -5.7106966401])
+    True
+
     """
     import os
 

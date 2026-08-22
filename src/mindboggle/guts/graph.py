@@ -167,7 +167,9 @@ def weight_graph(
             print(f"Construct sparse affinity matrix of size {Nodes.shape[0]}")
         affinity_matrix = lil_matrix((Nodes.shape[0], Nodes.shape[0]))
         for [i, j, edge_weight] in weighted_edges:
-            affinity_matrix[int(i), int(j)] = affinity_matrix[int(j), int(i)] = edge_weight
+            affinity_matrix[int(i), int(j)] = affinity_matrix[int(j), int(i)] = (
+                edge_weight
+            )
 
     # elif kernel is cotangent_kernel:
     #     if verbose:

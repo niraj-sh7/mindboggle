@@ -59,8 +59,63 @@ def propagate(
 
     Examples
     --------
-    >>> pass
+    >>> # Propagate labels between label boundary segments in a single fold:
+    >>> import numpy as np
+    >>> import mindboggle.guts.rebound as rb
+    >>> from mindboggle.guts.mesh import find_neighbors
+    >>> from mindboggle.guts.segment import extract_borders
+    >>> from mindboggle.guts.segment import propagate
+    >>> from mindboggle.mio.vtks import read_scalars, read_vtk
+    >>> from mindboggle.mio.labels import DKTprotocol
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> dkt = DKTprotocol()
+    >>> folds, name = read_scalars(folds_file, True, True)
+    >>> points, f1,f2, faces, labels, f3, npoints, f4 = read_vtk(label_file,
+    ...     True, True)
+    >>> neighbor_lists = find_neighbors(faces, npoints)
+    >>> background_value = -1
+    >>> # Limit number of folds to speed up the test:
+    >>> limit_folds = True
+    >>> if limit_folds:
+    ...     fold_numbers = [4, 7] #[4, 6]
+    ...     indices_fold = [i for i,x in enumerate(folds) if x in fold_numbers]
+    ...     i0 = [i for i,x in enumerate(folds) if x not in fold_numbers]
+    ...     folds[i0] = background_value
+    ... else:
+    ...     indices_fold = range(len(values))
+    >>> # Extract the boundary for this fold:
+    >>> indices_borders, label_pairs, foo = extract_borders(indices_fold,
+    ...     labels, neighbor_lists, [], True)
+    >>> # Select boundary segments in the sulcus labeling protocol:
+    >>> seeds = background_value * np.ones(npoints)
+    >>> for ilist,label_pair_list in enumerate(dkt.sulcus_label_pair_lists):
+    ...     I = [x for i,x in enumerate(indices_borders)
+    ...          if np.sort(label_pairs[i]).tolist() in label_pair_list]
+    ...     seeds[I] = ilist
+    >>> verbose = False
+    >>> region = folds
+    >>> max_iters = 500
+    >>> tol = 0.001
+    >>> sigma = 10
+    >>> segments = propagate(points, faces, region, seeds, labels,
+    ...                      max_iters, tol, sigma, background_value, verbose)
+    >>> np.unique(segments)[0:10]
+    array([-1.,  3., 12., 22.])
+    >>> len_segments = [len(np.where(segments == x)[0])
+    ...                 for x in np.unique(segments) if x != background_value]
+    >>> len_segments[0:10]
+    [1152, 388, 116]
 
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> rewrite_scalars(label_file, 'propagate.vtk',
+    ...                 segments, 'segments', folds, background_value) # doctest: +SKIP
+    >>> plot_surfaces('propagate.vtk') # doctest: +SKIP
 
     """
     import numpy as np
@@ -190,8 +245,79 @@ def segment_regions(
 
     Examples
     --------
-    >>> pass
+    >>> # Segment deep regions with or without seeds:
+    >>> import numpy as np
+    >>> from mindboggle.guts.segment import segment_regions
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.guts.mesh import find_neighbors
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> background_value = -1
+    >>> urls, fetch_data = prep_tests()
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> f1,f2,f3, faces, depths, f4, npoints, t5 = read_vtk(depth_file,
+    ...                                                     True, True)
+    >>> vertices_to_segment = np.where(depths > 0.50)[0].tolist()  # (sped up)
+    >>> neighbor_lists = find_neighbors(faces, npoints)
 
+    Example 1: without seed lists
+
+    >>> segments = segment_regions(vertices_to_segment, neighbor_lists)
+    >>> len(np.unique(segments))
+    92
+    >>> len_segments = [len(np.where(segments == x)[0])
+    ...                 for x in np.unique(segments) if x != background_value]
+    >>> len_segments[0:10]
+    [110928, 4, 1399, 1274, 5, 139, 255, 12, 5, 1686]
+
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'segment_regions_no_seeds.vtk', segments,
+    ...                 'segments', [], -1) # doctest: +SKIP
+    >>> plot_surfaces('segment_regions_no_seeds.vtk') # doctest: +SKIP
+
+    Example 2: with seed lists
+
+    >>> from mindboggle.guts.segment import extract_borders
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.labels import DKTprotocol
+    >>> dkt = DKTprotocol()
+    >>> label_lists = [np.unique(np.ravel(x)) for x in dkt.sulcus_label_pair_lists]
+    >>> labels_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> labels, name = read_scalars(labels_file)
+    >>> indices_borders, label_pairs, foo = extract_borders(vertices_to_segment,
+    ...     labels, neighbor_lists, ignore_values=[], return_label_pairs=True)
+    >>> seed_lists = []
+    >>> for label_pair_list in dkt.sulcus_label_pair_lists:
+    ...     seed_lists.append([x for i,x in enumerate(indices_borders)
+    ...                        if np.sort(label_pairs[i]).tolist()
+    ...                        in label_pair_list])
+    >>> keep_seeding = True
+    >>> spread_within_labels = True
+    >>> values = []
+    >>> max_steps = ''
+    >>> background_value = -1
+    >>> verbose = False
+    >>> segments = segment_regions(vertices_to_segment,
+    ...     neighbor_lists, 1, seed_lists, keep_seeding, spread_within_labels,
+    ...     labels, label_lists, values, max_steps, background_value, verbose)
+    >>> len(np.unique(segments))
+    122
+    >>> np.unique(segments)[0:10]
+    array([-1.,  1.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 11.])
+    >>> len_segments = [len(np.where(segments == x)[0])
+    ...                 for x in np.unique(segments) if x != background_value]
+    >>> len_segments[0:10]
+    [6962, 8033, 5965, 5598, 7412, 3636, 3070, 5244, 3972, 6144]
+
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'segment_regions.vtk', segments,
+    ...     'segments_from_seeds', [], -1) # doctest: +SKIP
+    >>> plot_surfaces('segment_regions.vtk') # doctest: +SKIP
 
     """
     import numpy as np
@@ -447,8 +573,33 @@ def segment_by_region(
 
     Examples
     --------
-    >>> pass
+    >>> # Segment fundus data by sulcus regions:
+    >>> import numpy as np
+    >>> from mindboggle.guts.segment import segment_by_region
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> fundus_file = fetch_data(urls['left_fundus_per_fold'], '', '.vtk')
+    >>> data, name = read_scalars(fundus_file, True, True)
+    >>> surface_file = fetch_data(urls['left_sulci'], '', '.vtk')
+    >>> regions, name = read_scalars(surface_file, True, True)
+    >>> save_file = True
+    >>> output_file = 'segment_by_region.vtk'
+    >>> background_value = -1
+    >>> verbose = False
+    >>> o1, o2, segment_per_region_file = segment_by_region(data, regions,
+    ...     surface_file, save_file, output_file, background_value, verbose)
+    >>> segment_numbers = [x for x in np.unique(o1) if x != background_value]
+    >>> lens = []
+    >>> for segment_number in segment_numbers:
+    ...     lens.append(len([x for x in o1 if x == segment_number]))
+    >>> lens[0:10]
+    [333, 229, 419, 251, 281, 380, 162, 137, 256, 29]
 
+    View result (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> plot_surfaces(segment_per_region_file) # doctest: +SKIP
 
     """
 
@@ -545,8 +696,38 @@ def segment_by_filling_borders(
 
     Examples
     --------
-    >>> pass
+    >>> # Segment folds by extracting their borders and filling them in separately:
+    >>> import numpy as np
+    >>> from mindboggle.guts.segment import segment_by_filling_borders
+    >>> from mindboggle.guts.mesh import find_neighbors
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> f1,f2,f3, faces, depths, f4, npoints, input_vtk = read_vtk(depth_file,
+    ...                                                            True, True)
+    >>> background_value = -1
+    >>> regions = background_value * np.ones(npoints)
+    >>> regions[depths > 0.50] = 1
+    >>> neighbor_lists = find_neighbors(faces, npoints)
+    >>> verbose = False
+    >>> segments = segment_by_filling_borders(regions, neighbor_lists,
+    ...                                       background_value, verbose)
+    >>> len(np.unique(segments))
+    19
+    >>> len_segments = []
+    >>> for useg in np.unique(segments):
+    ...     len_segments.append(len(np.where(segments == useg)[0]))
+    >>> len_segments[0:10]
+    [19446, 8619, 13846, 23, 244, 101687, 16, 792, 210, 76]
 
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> rewrite_scalars(depth_file, 'segment_by_filling_borders.vtk',
+    ...                 segments, 'segments', [], -1) # doctest: +SKIP
+    >>> plot_surfaces('segment_by_filling_borders.vtk') # doctest: +SKIP
 
     """
     import numpy as np
@@ -701,8 +882,64 @@ def segment_rings(
 
     Examples
     --------
-    >>> pass
+    >>> import numpy as np
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.guts.mesh import find_neighbors_from_file
+    >>> from mindboggle.guts.segment import extract_borders
+    >>> from mindboggle.guts.segment import segment_rings
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> folds_file = fetch_data(urls['left_folds'], '', '.vtk')
+    >>> values, name = read_scalars(vtk_file, True, True)
+    >>> neighbor_lists = find_neighbors_from_file(vtk_file)
+    >>> background_value = -1
+    >>> fold, name = read_scalars(folds_file)
+    >>> indices = [i for i,x in enumerate(fold) if x != background_value]
+    >>> # Initialize seeds with the boundary of thresholded indices:
+    >>> use_threshold = True
+    >>> if use_threshold:
+    ...     # Threshold at the median depth or within maximum values in boundary:
+    ...     threshold = np.median(values[indices]) #+ np.std(values[indices])
+    ...     indices_high = [x for x in indices if values[x] >= threshold]
+    ...     # Make sure threshold is within the maximum values of the boundary:
+    ...     B = np.ones(len(values))
+    ...     B[indices] = 2
+    ...     borders, foo1, foo2 = extract_borders(list(range(len(B))), B, neighbor_lists)
+    ...     borders = [x for x in borders if values[x] != background_value]
+    ...     if list(frozenset(indices_high).intersection(borders)):
+    ...         threshold = np.max(values[borders]) + np.std(values[borders])
+    ...         indices_high = [x for x in indices if values[x] >= threshold]
+    ...     # Extract threshold boundary vertices as seeds:
+    ...     B = background_value * np.ones(len(values))
+    ...     B[indices_high] = 2
+    ...     seeds, foo1, foo2 = extract_borders(list(range(len(values))), B, neighbor_lists)
+    ... # Or initialize P with the maximum value point:
+    ... else:
+    ...     seeds = [indices[np.argmax(values[indices])]]
+    ...     indices_high = []
+    >>> indices = list(frozenset(indices).difference(indices_high))
+    >>> indices = list(frozenset(indices).difference(seeds))
+    >>> step = 1
+    >>> verbose = False
+    >>> segments = segment_rings(indices, seeds, neighbor_lists, step,
+    ...                          background_value, verbose)
+    >>> len(segments)
+    56
+    >>> [len(x) for x in segments][0:10]
+    [5540, 5849, 6138, 5997, 4883, 3021, 1809, 1165, 842, 661]
+    >>> segments[0][0:10]
+    [65539, 65540, 98308, 98316, 131112, 131121, 131122, 131171, 131175, 131185]
 
+    Write results to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import read_scalars, rewrite_scalars # doctest: +SKIP
+    >>> S = background_value * np.ones(len(values)) # doctest: +SKIP
+    >>> for i, segment in enumerate(segments): S[segment] = i # doctest: +SKIP
+    >>> rewrite_scalars(vtk_file, 'segment_rings.vtk', S, 'segment_rings',
+    ...                 [], -1) # doctest: +SKIP
+    >>> plot_surfaces('segment_rings.vtk') # doctest: +SKIP
 
     """
     from mindboggle.guts.segment import segment_regions
@@ -815,8 +1052,46 @@ def watershed(
 
     Examples
     --------
-    >>> pass
+    >>> # Perform watershed segmentation on the deeper portions of a surface:
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import find_neighbors
+    >>> from mindboggle.guts.segment import watershed
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> points, indices, f1, faces, depths, f2, npoints, f3 = read_vtk(depth_file,
+    ...     return_first=True, return_array=True)
+    >>> indices = np.where(depths > 0.01)[0]  # high to speed up
+    >>> neighbor_lists = find_neighbors(faces, npoints)
+    >>> min_size = 50
+    >>> depth_factor = 0.25
+    >>> depth_ratio = 0.1
+    >>> tolerance = 0.01
+    >>> regrow = True
+    >>> background_value = -1
+    >>> verbose = False
+    >>> segments, seed_indices = watershed(depths, points,
+    ...     indices, neighbor_lists, min_size, depth_factor, depth_ratio,
+    ...     tolerance, regrow, background_value, verbose)
+    >>> len(np.unique(segments))
+    202
+    >>> len_segments = []
+    >>> for useg in np.unique(segments):
+    ...     len_segments.append(len(np.where(segments == useg)[0]))
+    >>> len_segments[0:10]
+    [2976, 4092, 597, 1338, 1419, 1200, 1641, 220, 1423, 182]
 
+    Write watershed segments and seeds to vtk file and view (skip test).
+    Note: white spots indicate incomplete segmentation:
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> segments_array = np.array(segments)
+    >>> segments_array[seed_indices] = 1.5 * np.max(segments_array)
+    >>> rewrite_scalars(depth_file, 'watershed.vtk',
+    ...                 segments_array, 'segments', [], -1) # doctest: +SKIP
+    >>> plot_surfaces('watershed.vtk') # doctest: +SKIP
 
     """
     from time import time
@@ -1157,8 +1432,56 @@ def select_largest(
 
     Examples
     --------
-    >>> pass
+    >>> # Two surface patches:
+    >>> import numpy as np
+    >>> from mindboggle.mio.vtks import read_scalars, read_vtk
+    >>> from mindboggle.guts.mesh import keep_faces
+    >>> from mindboggle.guts.segment import select_largest
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> exclude_labels = [-1]
+    >>> points, indices, f1, faces, labels, f2,f3,f4 = read_vtk(label_file,
+    ...                                                         True, True)
+    >>> I28 = [i for i,x in enumerate(labels) if x==1028] # superior frontal
+    >>> I20 = [i for i,x in enumerate(labels) if x==1020] # pars triangularis
+    >>> I28.extend(I20)
+    >>> faces = keep_faces(faces, I28)
+    >>> areas, u1 = read_scalars(area_file, True, True)
+    >>> reindex = True
+    >>> background_value = -1
+    >>> verbose = False
+    >>> points2, faces2 = select_largest(points, faces, exclude_labels, areas,
+    ...                                  reindex, background_value, verbose)
+    >>> points2[0]
+    [-1.4894376993179321, 53.260337829589844, 56.523414611816406]
+    >>> points2[1]
+    [-2.2537832260131836, 53.045711517333984, 56.23670959472656]
+    >>> points2[2]
+    [-13.091879844665527, 56.41604232788086, 59.330955505371094]
+    >>> faces2[0]
+    [7704, 7306, 7703]
+    >>> faces2[1]
+    [7694, 7704, 7705]
+    >>> faces2[2]
+    [7703, 8119, 7704]
 
+    Write two surfaces to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import write_vtk # doctest: +SKIP
+    >>> scalars = np.zeros(np.shape(labels)) # doctest: +SKIP
+    >>> scalars[I28] = 1 # doctest: +SKIP
+    >>> segments_file = 'select_largest_two_labels.vtk' # doctest: +SKIP
+    >>> write_vtk(vtk_file, points, indices, [], faces) # doctest: +SKIP
+    >>> plot_surfaces(vtk_file) # doctest: +SKIP
+
+    Write larger surface to vtk file and view (skip test):
+
+    >>> vtk_file = 'select_largest.vtk' # doctest: +SKIP
+    >>> write_vtk(vtk_file, points2, list(range(len(points2))), [], faces2) # doctest: +SKIP
+    >>> plot_surfaces(vtk_file) # doctest: +SKIP
 
     """
     import numpy as np
@@ -1297,8 +1620,57 @@ def extract_borders(
 
     Examples
     --------
-    >>> pass
+    >>> # Small example:
+    >>> from mindboggle.guts.segment import extract_borders
+    >>> indices = [0,1,2,4,5,8,9]
+    >>> labels = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, -1, -1]
+    >>> neighbor_lists = [[1,2,3], [1,2], [2,3], [2], [4,7], [3,2,3],
+    ...                   [2,3,7,8], [2,6,7], [3,4,8], [7], [7,8], [3,2,3]]
+    >>> border_indices, border_label_tuples, ubLT = extract_borders(indices,
+    ...     labels, neighbor_lists, [], True)
+    >>> border_indices
+    [0, 1, 2, 4, 5, 8]
+    >>> border_label_tuples
+    [[20, 30, 40], [20, 30], [30, 40], [50, 80], [30, 40], [40, 50, 90]]
+    >>> ubLT
+    [[20, 30, 40], [20, 30], [30, 40], [50, 80], [40, 50, 90]]
 
+    Real example -- extract sulcus label boundaries:
+
+    >>> import numpy as np
+    >>> from mindboggle.guts.mesh import find_neighbors
+    >>> from mindboggle.guts.segment import extract_borders
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> f1,f2,f3, faces, labels, f4, npoints, f5 = read_vtk(label_file,
+    ...                                                     True, True)
+    >>> neighbor_lists = find_neighbors(faces, npoints)
+    >>> ignore_values = []
+    >>> return_label_pairs = True
+    >>> indices_borders, label_pairs, f1 = extract_borders(list(range(npoints)),
+    ...     labels, neighbor_lists, ignore_values, return_label_pairs)
+    >>> indices_borders[0:10]
+    [115, 116, 120, 121, 125, 126, 130, 131, 281, 286]
+    >>> label_pairs[0:5]
+    [[1005, 1011], [1005, 1011], [1005, 1011], [1005, 1011], [1005, 1011]]
+
+    Write borders on surfaces to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars
+    >>> IDs = -1 * np.ones(npoints) # doctest: +SKIP
+    >>> IDs[indices_borders] = 1 # doctest: +SKIP
+    >>> rewrite_scalars(label_file, 'extract_borders.vtk',
+    ...                 IDs, 'borders') # doctest: +SKIP
+    >>> plot_surfaces('extract_borders.vtk') # doctest: +SKIP
+
+    Write just the borders to vtk file and view (skip test):
+
+    >>> rewrite_scalars(label_file, 'extract_borders_no_background.vtk',
+    ...                 IDs, 'borders', IDs) # doctest: +SKIP
+    >>> plot_surfaces('extract_borders_no_background.vtk') # doctest: +SKIP
 
     """
     import numpy as np
@@ -1375,8 +1747,26 @@ def extract_borders_2nd_surface(
 
     Examples
     --------
-    >>> pass
+    >>> # Extract depth values along label borders in sulci (mask):
+    >>> import numpy as np
+    >>> from mindboggle.guts.segment import extract_borders_2nd_surface
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> values_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> background_value = -1
+    >>> output_file = 'extract_borders_2nd_surface.vtk'
+    >>> border_file, values, I = extract_borders_2nd_surface(label_file,
+    ...     values_file, output_file, background_value)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in np.unique(values)[0:8]]
+    [-1.0, 0.0, 0.00012, 0.00023, 0.00032, 0.00044, 0.00047, 0.00051]
+    >>> I[0:10]
+    [115, 116, 120, 121, 125, 126, 130, 131, 281, 286]
 
+    Write depth values on label borders to vtk file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> plot_surfaces(border_file) # doctest: +SKIP
 
     """
     import os
@@ -1478,8 +1868,23 @@ def combine_2labels_in_2volumes(file1, file2, label1=3, label2=2, output_file=""
 
     Examples
     --------
-    >>> pass
+    >>> # Example following documentation above:
+    >>> import os
+    >>> from mindboggle.guts.segment import combine_2labels_in_2volumes
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> file1 = fetch_data(urls['freesurfer_segmentation'], '', '.nii.gz')
+    >>> file2 = fetch_data(urls['ants_segmentation'], '', '.nii.gz')
+    >>> label1 = 3
+    >>> label2 = 2
+    >>> output_file = 'combine_2labels_in_2volumes.nii.gz'
+    >>> output_file = combine_2labels_in_2volumes(file1, file2, label1,
+    ...                                           label2, output_file)
 
+    View nifti file (skip test):
+
+    >>> from mindboggle.mio.plots import plot_volumes # doctest: +SKIP
+    >>> plot_volumes(output_file) # doctest: +SKIP
 
     """
     import os
@@ -1551,8 +1956,22 @@ def split_brain(image_file, label_file, left_labels, right_labels):
 
     Examples
     --------
-    >>> pass
+    >>> from mindboggle.guts.segment import split_brain
+    >>> from mindboggle.mio.labels import DKTprotocol
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> image_file = fetch_data(urls['freesurfer_segmentation'], '', '.nii.gz')
+    >>> label_file = fetch_data(urls['freesurfer_labels'], '', '.nii.gz')
+    >>> dkt = DKTprotocol()
+    >>> left_labels = dkt.left_cerebrum_numbers
+    >>> right_labels = dkt.right_cerebrum_numbers
+    >>> left_brain, right_brain = split_brain(image_file, label_file,
+    ...                                       left_labels, right_labels)
 
+    Write results to nifti file and view (skip test):
+
+    >>> from mindboggle.mio.plots import plot_volumes # doctest: +SKIP
+    >>> plot_volumes([left_brain, right_brain]) # doctest: +SKIP
 
     """
     import os
