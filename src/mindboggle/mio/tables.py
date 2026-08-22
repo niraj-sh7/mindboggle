@@ -113,7 +113,47 @@ def write_shape_stats(
 
     Examples
     --------
-    >>> pass
+    >>> from mindboggle.mio.tables import write_shape_stats
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> sulci_file = fetch_data(urls['left_sulci'], '', '.vtk')
+    >>> fundi_file = fetch_data(urls['left_fundus_per_sulcus'], '', '.vtk')
+    >>> mean_curvature_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> travel_depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> geodesic_depth_file = fetch_data(urls['left_geodesic_depth'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> freesurfer_thickness_file = ''
+    >>> freesurfer_curvature_file = ''
+    >>> freesurfer_sulc_file = ''
+    >>> sulci, name = read_scalars(sulci_file)
+    >>> fundi, name = read_scalars(fundi_file)
+    >>> affine_transform_files = []
+    >>> inverse_booleans = []
+    >>> transform_format = 'itk'
+    >>> normalize_by_area = False
+    >>> labels, name = read_scalars(label_file)
+    >>> labels_spectra = []
+    >>> labels_spectra_IDs = []
+    >>> sulci_spectra = []
+    >>> sulci_spectra_IDs = []
+    >>> labels_zernike = []
+    >>> labels_zernike_IDs = []
+    >>> sulci_zernike = []
+    >>> sulci_zernike_IDs = []
+    >>> exclude_labels = [-1]
+    >>> verbose = False
+    >>> label_table, sulcus_table, fundus_table = write_shape_stats(label_file,
+    ...     sulci, fundi, affine_transform_files, inverse_booleans,
+    ...     transform_format, area_file, normalize_by_area,
+    ...     mean_curvature_file, travel_depth_file, geodesic_depth_file,
+    ...     freesurfer_thickness_file, freesurfer_curvature_file,
+    ...     freesurfer_sulc_file, labels_spectra, labels_spectra_IDs,
+    ...     sulci_spectra, sulci_spectra_IDs, labels_zernike,
+    ...     labels_zernike_IDs, sulci_zernike, sulci_zernike_IDs,
+    ...     exclude_labels, verbose)
+
     """
     import os
 
@@ -475,7 +515,56 @@ def write_vertex_measures(
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> from mindboggle.mio.vtks import read_scalars
+    >>> from mindboggle.mio.tables import write_vertex_measures
+    >>> output_table = '' #vertex_shapes.csv'
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> labels_or_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> sulci_file = fetch_data(urls['left_sulci'], '', '.vtk')
+    >>> fundi_file = fetch_data(urls['left_fundus_per_sulcus'], '', '.vtk')
+    >>> mean_curvature_file = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> travel_depth_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> geodesic_depth_file = fetch_data(urls['left_geodesic_depth'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> freesurfer_thickness_file = fetch_data(urls['left_freesurfer_thickness'], '', '.vtk')
+    >>> freesurfer_curvature_file = fetch_data(urls['left_freesurfer_curvature'], '', '.vtk')
+    >>> freesurfer_sulc_file = fetch_data(urls['left_freesurfer_sulc'], '', '.vtk')
+    >>> sulci, name = read_scalars(sulci_file)
+    >>> if fundi_file:
+    ...     fundi, name = read_scalars(fundi_file)
+    ... else:
+    ...     fundi = []
+    >>> affine_transform_file = fetch_data(urls['affine_mni_transform'], '', '.txt')
+    >>> inverse_booleans = [1]
+    >>> transform_format = 'itk'
+    >>> swap_xy = True
+    >>> affine_rename = affine_transform_file + '.txt'
+    >>> os.rename(affine_transform_file, affine_rename)
+    >>> os.rename(labels_or_file, labels_or_file + '.vtk')
+    >>> os.rename(area_file, area_file + '.vtk')
+    >>> os.rename(mean_curvature_file, mean_curvature_file + '.vtk')
+    >>> os.rename(travel_depth_file, travel_depth_file + '.vtk')
+    >>> os.rename(geodesic_depth_file, geodesic_depth_file + '.vtk')
+    >>> os.rename(freesurfer_thickness_file, freesurfer_thickness_file + '.vtk')
+    >>> os.rename(freesurfer_curvature_file, freesurfer_curvature_file + '.vtk')
+    >>> os.rename(freesurfer_sulc_file, freesurfer_sulc_file + '.vtk')
+    >>> labels_or_file = labels_or_file + '.vtk'
+    >>> area_file = area_file + '.vtk'
+    >>> mean_curvature_file = mean_curvature_file + '.vtk'
+    >>> travel_depth_file = travel_depth_file + '.vtk'
+    >>> geodesic_depth_file = geodesic_depth_file + '.vtk'
+    >>> freesurfer_thickness_file = freesurfer_thickness_file + '.vtk'
+    >>> freesurfer_curvature_file = freesurfer_curvature_file + '.vtk'
+    >>> freesurfer_sulc_file = freesurfer_sulc_file + '.vtk'
+    >>> affine_transform_files = [] # [affine_rename] # requires ANTs to test
+    >>> output_table = write_vertex_measures(output_table, labels_or_file,
+    ...     sulci, fundi, affine_transform_files, inverse_booleans,
+    ...     transform_format, area_file, mean_curvature_file,
+    ...     travel_depth_file, geodesic_depth_file, freesurfer_thickness_file,
+    ...     freesurfer_curvature_file, freesurfer_sulc_file)
+
     """
     import os
 
@@ -607,7 +696,15 @@ def write_face_vertex_averages(input_file, output_table="", area_file=""):
 
     Examples
     --------
-    >>> pass
+    >>> from mindboggle.mio.tables import write_face_vertex_averages
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_file = fetch_data(urls['left_travel_depth'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> output_table = ''
+    >>> output_table = write_face_vertex_averages(input_file, output_table,
+    ...                                           area_file)
+
     """
     import os
 
@@ -683,7 +780,27 @@ def write_average_face_values_per_label(
 
     Examples
     --------
-    >>> pass
+    >>> import os
+    >>> from mindboggle.mio.tables import write_average_face_values_per_label
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> input_indices_vtk = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> input_values_vtk = fetch_data(urls['left_mean_curvature'], '', '.vtk')
+    >>> area_file = fetch_data(urls['left_area'], '', '.vtk')
+    >>> output_stem = 'labels_thickness'
+    >>> exclude_values = [-1]
+    >>> background_value = -1
+    >>> verbose = False
+    >>> write_average_face_values_per_label(input_indices_vtk,
+    ...     input_values_vtk, area_file, output_stem, exclude_values,
+    ...     background_value, verbose)
+
+    View vtk file (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces
+    >>> example_vtk = os.path.join(os.getcwd(), output_stem + '0.vtk')
+    >>> plot_surfaces(example_vtk) # doctest: +SKIP
+
     """
     import os
 

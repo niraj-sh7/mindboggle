@@ -84,12 +84,44 @@ script-files = [
 mindboggle = ["data/*.nii.gz", "data/*.txt"]
 
 [tool.pytest.ini_options]
+# The doctests in this package are the only characterisation tests we have on
+# the numeric core, and they are the baseline Phase 3 (niwrap) gets validated
+# against. So: a doctest that cannot run is SKIPPED HERE, with a reason and an
+# issue -- never deleted, and never stubbed out with `>>> pass`. The expected
+# output is the part we cannot reconstruct.
 addopts = [
+  # === Not tests: Python 2-era scratch/compat modules, quarantined (#14). ===
   "--ignore=src/mindboggle/testzernikecompatinit.py",
   "--ignore=src/mindboggle/testzernikecompat*.py",
   "--ignore=src/mindboggle/testzernikemultiproc*.py",
   "--ignore=src/mindboggle/x/test_zernike/compat",
   "--ignore=src/mindboggle/x/test_zernike/multiproc",
+
+  # === Skip ledger: doctests that currently segfault, hang, or need a heavy
+  #     binary we do not have in CI. Each one is a test we WANT back. Re-enable
+  #     and delete the line as they are fixed (#28). ===
+
+  # -- Need the VTK C++ tools on PATH; segfault under xvfb in CI. --
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.area",
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.curvature",
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.geodesic_depth",
+  "--deselect=src/mindboggle/shapes/surface_shapes.py::mindboggle.shapes.surface_shapes.travel_depth",
+  "--deselect=src/mindboggle/guts/mesh.py::mindboggle.guts.mesh.decimate_file",
+
+  # -- Exceed the 30s timeout on the reference data. --
+  "--deselect=src/mindboggle/guts/paths.py::mindboggle.guts.paths.connect_points_hmmf",
+  "--deselect=src/mindboggle/guts/paths.py::mindboggle.guts.paths.smooth_skeletons",
+  "--deselect=src/mindboggle/features/sulci.py::mindboggle.features.sulci.extract_sulci",
+  "--deselect=src/mindboggle/guts/mesh.py::mindboggle.guts.mesh.rescale_by_neighborhood",
+  "--deselect=src/mindboggle/guts/mesh.py::mindboggle.guts.mesh.rescale_by_label",
+
+  # -- Fail on NumPy 2 scalar repr or removed aliases; need expected-output
+  #    updates, which is a real (small) piece of work, not a rewrite. --
+  "--deselect=src/mindboggle/guts/compute.py::mindboggle.guts.compute.sum_per_label",
+  "--deselect=src/mindboggle/guts/compute.py::mindboggle.guts.compute.stats_per_label",
+  "--deselect=src/mindboggle/mio/colors.py::mindboggle.mio.colors.group_colors",
+  "--deselect=src/mindboggle/mio/colors.py::mindboggle.mio.colors.label_adjacency_matrix",
+  "--deselect=src/mindboggle/evaluate/evaluate_labels.py::mindboggle.evaluate.evaluate_labels.evaluate_surface_overlaps",
 ]
 
 [tool.setuptools.dynamic]

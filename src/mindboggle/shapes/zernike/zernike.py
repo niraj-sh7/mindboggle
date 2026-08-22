@@ -56,7 +56,72 @@ def zernike_moments(
 
     Examples
     --------
-    >>> pass
+    >>> # Example 1: simple cube (decimation results in a Segmentation Fault):
+    >>> import numpy as np
+    >>> from mindboggle.shapes.zernike.zernike import zernike_moments
+    >>> points = [[0,0,0], [1,0,0], [0,0,1], [0,1,1],
+    ...           [1,0,1], [0,1,0], [1,1,1], [1,1,0]]
+    >>> faces = [[0,2,4], [0,1,4], [2,3,4], [3,4,5], [3,5,6], [0,1,7]]
+    >>> order = 3
+    >>> scale_input = True
+    >>> decimate_fraction = 0
+    >>> decimate_smooth = 0
+    >>> verbose = False
+    >>> descriptors = zernike_moments(points, faces, order, scale_input,
+    ...     decimate_fraction, decimate_smooth, verbose)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors]
+    [0.09189, 0.09357, 0.04309, 0.06466, 0.0382, 0.04138]
+
+    Example 2: Twins-2-1 left postcentral pial surface -- NO decimation:
+               (zernike_moments took 142 seconds for order = 3 with no decimation)
+
+    >>> from mindboggle.shapes.zernike.zernike import zernike_moments
+    >>> from mindboggle.mio.vtks import read_vtk
+    >>> from mindboggle.guts.mesh import keep_faces
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> label_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> points, f1,f2, faces, labels, f3,f4,f5 = read_vtk(label_file)
+    >>> I22 = [i for i,x in enumerate(labels) if x==1022] # postcentral
+    >>> faces = keep_faces(faces, I22)
+    >>> order = 3
+    >>> scale_input = True
+    >>> decimate_fraction = 0
+    >>> decimate_smooth = 0
+    >>> verbose = False
+    >>> descriptors = zernike_moments(points, faces, order, scale_input,
+    ...     decimate_fraction, decimate_smooth, verbose)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors]
+    [0.00471, 0.0084, 0.00295, 0.00762, 0.0014, 0.00076]
+
+    Example 3: left postcentral + pars triangularis pial surfaces:
+
+    >>> from mindboggle.mio.vtks import read_vtk, write_vtk
+    >>> points, f1,f2, faces, labels, f3,f4,f5 = read_vtk(label_file)
+    >>> I20 = [i for i,x in enumerate(labels) if x==1020] # pars triangularis
+    >>> I22 = [i for i,x in enumerate(labels) if x==1022] # postcentral
+    >>> I22.extend(I20)
+    >>> faces = keep_faces(faces, I22)
+    >>> order = 3
+    >>> scale_input = True
+    >>> decimate_fraction = 0
+    >>> decimate_smooth = 0
+    >>> verbose = False
+    >>> descriptors = zernike_moments(points, faces, order, scale_input,
+    ...     decimate_fraction, decimate_smooth, verbose)
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors]
+    [0.00586, 0.00973, 0.00322, 0.00818, 0.0013, 0.00131]
+
+    View both segments (skip test):
+
+    >>> from mindboggle.mio.plots import plot_surfaces # doctest: +SKIP
+    >>> from mindboggle.mio.vtks import rewrite_scalars # doctest: +SKIP
+    >>> scalars = -1 * np.ones(np.shape(labels)) # doctest: +SKIP
+    >>> scalars[I22] = 1 # doctest: +SKIP
+    >>> rewrite_scalars(label_file, 'test_two_labels.vtk', scalars,
+    ...                 'two_labels', scalars) # doctest: +SKIP
+    >>> plot_surfaces(vtk_file) # doctest: +SKIP
+
     """
     import numpy as np
 
@@ -162,7 +227,33 @@ def zernike_moments_per_label(
 
     Examples
     --------
-    >>> pass
+    >>> # Zernike moments per label of a FreeSurfer-labeled left cortex.
+    >>> # Uncomment "if label==22:" below to run example
+    >>> # for left postcentral (22) pial surface:
+    >>> import numpy as np
+    >>> from mindboggle.shapes.zernike.zernike import zernike_moments_per_label
+    >>> from mindboggle.mio.fetch_data import prep_tests
+    >>> urls, fetch_data = prep_tests()
+    >>> vtk_file = fetch_data(urls['left_freesurfer_labels'], '', '.vtk')
+    >>> order = 3
+    >>> exclude_labels = [-1]
+    >>> scale_input = True
+    >>> verbose = False
+    >>> descriptors_lists, label_list = zernike_moments_per_label(vtk_file,
+    ...     order, exclude_labels, scale_input, verbose)
+    >>> label_list[0:10]
+    [999, 1001, 1002, 1003, 1005, 1006, 1007, 1008, 1009, 1010]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[0]]
+    [0.00587, 0.01143, 0.0031, 0.00881, 0.00107, 0.00041]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[1]]
+    [4e-05, 9e-05, 3e-05, 9e-05, 2e-05, 1e-05]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[2]]
+    [0.00144, 0.00232, 0.00128, 0.00304, 0.00084, 0.00051]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[3]]
+    [0.00393, 0.006, 0.00371, 0.00852, 0.00251, 0.00153]
+    >>> [float("{0:.{1}f}".format(x, 5)) for x in descriptors_lists[4]]
+    [0.00043, 0.0003, 0.00095, 0.00051, 0.00115, 0.00116]
+
     """
     import numpy as np
 
