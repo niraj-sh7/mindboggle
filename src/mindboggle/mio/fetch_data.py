@@ -346,6 +346,11 @@ def fetch_data(url, output_file="", append=""):
 
     Optionally append to file name.
 
+    Downloaded files are cached under $MINDBOGGLE_CACHE (or
+    ~/.cache/mindboggle by default), keyed by a hash of the URL, so
+    repeated calls for the same URL (e.g. across doctest runs or CI runs)
+    reuse the cached copy instead of re-downloading.
+
     Parameters
     ----------
     url : string
@@ -372,10 +377,30 @@ def fetch_data(url, output_file="", append=""):
     'f36e3d5d99f7c4a9bb70e2494ed7340b'
 
     """
+    import hashlib
     import os
+    import shutil
+    import tempfile
     import urllib.request
 
-    output_file, foo = urllib.request.urlretrieve(url, output_file)
+    cache_dir = os.environ.get("MINDBOGGLE_CACHE") or os.path.join(
+        os.path.expanduser("~"), ".cache", "mindboggle"
+    )
+    os.makedirs(cache_dir, exist_ok=True)
+
+    url_key = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    cache_path = os.path.join(cache_dir, url_key)
+
+    if not os.path.exists(cache_path):
+        tmp_path, _ = urllib.request.urlretrieve(url)
+        shutil.move(tmp_path, cache_path)
+
+    if output_file:
+        shutil.copyfile(cache_path, output_file)
+    else:
+        fd, output_file = tempfile.mkstemp()
+        os.close(fd)
+        shutil.copyfile(cache_path, output_file)
 
     # Add append if assigned:
     if append:
