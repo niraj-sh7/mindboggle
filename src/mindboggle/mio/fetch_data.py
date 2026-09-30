@@ -381,6 +381,8 @@ def fetch_data(url, output_file="", append=""):
     import os
     import shutil
     import tempfile
+    import time
+    import urllib.error
     import urllib.request
 
     cache_dir = os.environ.get("MINDBOGGLE_CACHE") or os.path.join(
@@ -392,7 +394,18 @@ def fetch_data(url, output_file="", append=""):
     cache_path = os.path.join(cache_dir, url_key)
 
     if not os.path.exists(cache_path):
-        tmp_path, _ = urllib.request.urlretrieve(url)
+        for attempt in range(3):
+            try:
+                tmp_path, _ = urllib.request.urlretrieve(url)
+                break
+            except urllib.error.HTTPError as err:
+                if err.code < 500 or attempt == 2:
+                    raise
+                time.sleep(2**attempt)
+            except urllib.error.URLError:
+                if attempt == 2:
+                    raise
+                time.sleep(2**attempt)
         shutil.move(tmp_path, cache_path)
 
     if output_file:
