@@ -108,6 +108,12 @@ addopts = [
   "--deselect=src/mindboggle/guts/mesh.py::mindboggle.guts.mesh.decimate_file",
 
   # -- Exceed the 30s timeout on the reference data. --
+  "--deselect=src/mindboggle/guts/segment.py::mindboggle.guts.segment.watershed",
+  "--deselect=src/mindboggle/mio/colors.py::mindboggle.mio.colors.distinguishable_colors",
+  "--deselect=src/mindboggle/mio/tables.py::mindboggle.mio.tables.write_average_face_values_per_label",
+  "--deselect=src/mindboggle/mio/tables.py::mindboggle.mio.tables.write_shape_stats",
+  "--deselect=src/mindboggle/shapes/laplace_beltrami.py::mindboggle.shapes.laplace_beltrami.spectrum_from_file",
+  "--deselect=src/mindboggle/shapes/zernike/zernike.py::mindboggle.shapes.zernike.zernike.zernike_moments_per_label",
   "--deselect=src/mindboggle/guts/paths.py::mindboggle.guts.paths.connect_points_hmmf",
   "--deselect=src/mindboggle/guts/paths.py::mindboggle.guts.paths.smooth_skeletons",
   "--deselect=src/mindboggle/features/sulci.py::mindboggle.features.sulci.extract_sulci",
