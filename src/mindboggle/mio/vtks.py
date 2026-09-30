@@ -299,7 +299,6 @@ def read_scalars(filename, return_first=True, return_array=False):
     scalars = []
     scalar_names = []
     for scalar_name in _point_data_array_names(PointData):
-
         # n_scalars = scalar_index + 1
         # if n_scalars == 1:
         #    print("Load \"{0}\" scalars from {1}".
@@ -429,7 +428,6 @@ def read_vtk(input_vtk, return_first=True, return_array=False):
     scalar_names = []
 
     for scalar_name in _point_data_array_names(PointData):
-
         # n_scalars = scalar_index + 1
         # if n_scalars == 1:
         #    print("Load \"{0}\" scalars from {1}".

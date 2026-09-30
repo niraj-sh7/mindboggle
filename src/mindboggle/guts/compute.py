@@ -106,9 +106,9 @@ def point_distance(point, points):
         # return np.linalg.norm(np.array(point) - np.array(points))
         return float(
             np.sqrt(
-            (point[0] - points[0]) ** 2
-            + (point[1] - points[1]) ** 2
-            + (point[2] - points[2]) ** 2
+                (point[0] - points[0]) ** 2
+                + (point[1] - points[1]) ** 2
+                + (point[2] - points[2]) ** 2
             )
         ), 0
 
