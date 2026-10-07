@@ -340,16 +340,27 @@ def fetch_hash(data_file):
     return hash
 
 
+def _url_cache_path(url):
+    """Return the fetch_data() cache path for a URL, or "" if caching is off."""
+    import hashlib
+    import os
+
+    cache_dir = os.environ.get("MINDBOGGLE_CACHE")
+    if not cache_dir:
+        return ""
+    return os.path.join(cache_dir, hashlib.sha256(url.encode("utf-8")).hexdigest())
+
+
 def fetch_data(url, output_file="", append=""):
     """
     Download file from a URL to a specified or a temporary file.
 
     Optionally append to file name.
 
-    Downloaded files are cached under $MINDBOGGLE_CACHE (or
-    ~/.cache/mindboggle by default), keyed by a hash of the URL, so
-    repeated calls for the same URL (e.g. across doctest runs or CI runs)
-    reuse the cached copy instead of re-downloading.
+    If the MINDBOGGLE_CACHE environment variable is set, downloaded files
+    are cached in that directory, keyed by a hash of the URL, so repeated
+    calls for the same URL (e.g. across doctest runs or CI runs) reuse the
+    cached copy. Without it, nothing is cached.
 
     Parameters
     ----------
@@ -377,30 +388,35 @@ def fetch_data(url, output_file="", append=""):
     'f36e3d5d99f7c4a9bb70e2494ed7340b'
 
     """
-    import hashlib
     import os
     import shutil
     import tempfile
     import urllib.request
 
-    cache_dir = os.environ.get("MINDBOGGLE_CACHE") or os.path.join(
-        os.path.expanduser("~"), ".cache", "mindboggle"
-    )
-    os.makedirs(cache_dir, exist_ok=True)
+    cache_dir = os.environ.get("MINDBOGGLE_CACHE")
 
-    url_key = hashlib.sha256(url.encode("utf-8")).hexdigest()
-    cache_path = os.path.join(cache_dir, url_key)
-
-    if not os.path.exists(cache_path):
-        tmp_path, _ = urllib.request.urlretrieve(url)
-        shutil.move(tmp_path, cache_path)
-
-    if output_file:
-        shutil.copyfile(cache_path, output_file)
+    if not cache_dir:
+        output_file, _ = urllib.request.urlretrieve(url, output_file)
     else:
-        fd, output_file = tempfile.mkstemp()
-        os.close(fd)
-        shutil.copyfile(cache_path, output_file)
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_path = _url_cache_path(url)
+
+        if not os.path.exists(cache_path):
+            fd, tmp_path = tempfile.mkstemp(dir=cache_dir, suffix=".part")
+            os.close(fd)
+            try:
+                urllib.request.urlretrieve(url, tmp_path)
+                os.replace(tmp_path, cache_path)
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+
+        if output_file:
+            shutil.copyfile(cache_path, output_file)
+        else:
+            fd, output_file = tempfile.mkstemp()
+            os.close(fd)
+            shutil.copyfile(cache_path, output_file)
 
     # Add append if assigned:
     if append:
@@ -518,6 +534,10 @@ def fetch_check_data(
                 shutil.copyfile(temp_file, data_path)
                 return data_path
             else:
+                # Do not keep a bad download in the fetch_data() cache:
+                bad_cache = _url_cache_path(url)
+                if bad_cache and os.path.exists(bad_cache):
+                    os.remove(bad_cache)
                 raise OSError("Retrieved hash does not match stored hash.")
     else:
         raise OSError(f"Data file '{data_file}' not in hash table.")

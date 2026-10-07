@@ -205,7 +205,7 @@ class SerialPipeline(Pipeline):
         return y
 
     def Qklnu(self, k, l, nu):
-        aux_1 = np.power(-1, k + nu) / np.float(np.power(4, k))
+        aux_1 = np.power(-1, k + nu) / float(np.power(4, k))
         aux_2 = np.sqrt((2 * l + 4 * k + 3) / 3.0)
         aux_3 = self.trinomial(nu, k - nu, l + nu + 1) * nchoosek(
             2 * (l + nu + 1 + k), l + nu + 1 + k

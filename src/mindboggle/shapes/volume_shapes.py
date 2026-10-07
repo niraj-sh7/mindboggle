@@ -80,10 +80,10 @@ def volume_per_brain_region(
     ...     output_table, verbose)
     >>> [float("{0:.{1}f}".format(x, 5))
     ...  for x in [y for y in volumes if y > 0][0:5]]
-    [971.99799, 2413.99487, 2192.99536, 8328.98242, 2940.9939]
+    [971.99797, 2413.99496, 2192.99543, 8328.98262, 2940.99386]
     >>> [float("{0:.{1}f}".format(x, 5))
     ...  for x in [y for y in volumes if y > 0][5:10]]
-    [1997.99585, 10905.97754, 11318.97656, 10789.97754, 2700.99438]
+    [1997.99583, 10905.97725, 11318.97639, 10789.97749, 2700.99437]
 
     """
     import os
@@ -95,7 +95,7 @@ def volume_per_brain_region(
 
     # Load labeled image volumes:
     img = nb.load(input_file)
-    volume_per_voxel = np.prod(img.header.get_zooms())
+    volume_per_voxel = float(np.prod(img.header.get_zooms()))
     labels = img.get_fdata().ravel()
 
     unique_labels, counts = count_per_label(labels, include_labels, exclude_labels)
